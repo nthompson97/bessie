@@ -3,9 +3,12 @@ name = "bessie"
 version = "0.1.0"
 description = "BESS modelling in the NEM"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 dependencies = [
     "ipython>=9.9.0",
-    "pytest>=9.0.2",
+    "nemosis>=3.8.1",
+    "nemseer>=1.0.7",
+    "pandas<3",
+    "pytest>=7.0.0,<8.0.0",
     "ruff>=0.14.13",
 ]

@@ -20,6 +20,10 @@ up:
 		podman volume create $(NAME)-bash-history; \
 	fi
 
+	@if ! podman volume exists $(NAME)-data 2>/dev/null; then \
+		podman volume create $(NAME)-data; \
+	fi
+
 	podman pod create \
 		--name $(NAME)-pod \
 		--userns keep-id
@@ -28,6 +32,7 @@ up:
 		--pod $(NAME)-pod \
 		--name $(NAME) \
 		--volume $(NAME)-bash-history:/home/ubuntu/bash_history \
+		--volume $(NAME)-data:/data \
 		--volume ./:/home/ubuntu/repo/:z \
 		--volume ~/.claude:/home/ubuntu/.claude:z \
 		--volume ~/.claude.json:/home/ubuntu/.claude.json:z \
