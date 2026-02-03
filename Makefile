@@ -24,9 +24,11 @@ up:
 		podman volume create $(NAME)-data; \
 	fi
 
+	# 8050: plotly,
 	podman pod create \
 		--name $(NAME)-pod \
-		--userns keep-id
+		--userns keep-id \
+		--publish 8050:8050
 
 	podman run -d \
 		--pod $(NAME)-pod \

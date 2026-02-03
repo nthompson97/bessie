@@ -6,15 +6,11 @@ def main() -> None:
     start = pandas.Timestamp("2023-01-01 00:00:00")
     end = pandas.Timestamp("2023-02-01 00:00:00")
 
-    get_nemseer_data(
+    df = get_nemseer_data(
         start=start,
         end=end,
         forecast_type="PREDISPATCH",
         table="PRICE",
-    )
-
-    df = pandas.read_parquet(
-        "/data/nemseer/PUBLIC_DVD_PREDISPATCHPRICE_202301010000.parquet"
     )
     print(df)
 
