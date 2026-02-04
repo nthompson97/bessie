@@ -3,36 +3,34 @@ import pandas
 import pandas as pd
 
 from bessie.data import get_nemosis_data, get_nemseer_data
-from bessie.plotting import timeseries_chart
+from bessie.plotting import tsplot
 
 
 def main() -> None:
     start = pandas.Timestamp("2023-01-01 00:00:00")
     end = pandas.Timestamp("2023-02-01 00:00:00")
 
-    df = get_nemosis_data(
+    price = get_nemosis_data(
         start=start,
         end=end,
         table="DISPATCHPRICE",
     )
-
-    # timeseries_chart(df.pivot(columns="REGIONID", index="SETTLEMENTDATE", values="RRP"))
-
-    # Some dummy data that will be used throughout the examples
-    n = 2_000_000
-    x = np.arange(n)
-    x_time = pd.date_range("2020-01-01", freq="1s", periods=len(x))
-    noisy_sine = (3 + np.sin(x / 2000) + np.random.randn(n) / 10) * x / (n / 4)
-
-    df = pandas.DataFrame(
-        index=x_time,
-        data={
-            "foo": noisy_sine,
-            "bar": 0.5 * noisy_sine - 3,
-        },
+    price_pivoted = price.pivot(
+        columns="REGIONID", index="SETTLEMENTDATE", values="RRP"
     )
 
-    timeseries_chart({"plot 1": df, "plot 2": df["foo"]})
+    dispatch = get_nemosis_data(
+        start=start,
+        end=end,
+        table="DISPATCHREGIONSUM",
+    )
+    dispatch_pivoted = dispatch.pivot(
+        columns="REGIONID",
+        index="SETTLEMENTDATE",
+        values="TOTALDEMAND",
+    )
+
+    tsplot({"Price": price_pivoted, "Demand": dispatch_pivoted})
 
     from IPython import embed
 

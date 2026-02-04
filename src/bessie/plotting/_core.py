@@ -9,7 +9,22 @@ from plotly.subplots import make_subplots
 from plotly_resampler import FigureResampler
 
 PORT: int = 8050
+
 Timeseries = pandas.Series | pandas.DataFrame
+
+# I really like the seaborn colours, so am adding them here manually
+SEABORN_DEEP = [
+    "#4C72B0",
+    "#DD8452",
+    "#55A868",
+    "#C44E52",
+    "#8172B3",
+    "#937860",
+    "#DA8BC3",
+    "#8C8C8C",
+    "#CCB974",
+    "#64B5CD",
+]
 
 
 def show(fig: go.Figure, port: int = PORT) -> None:
@@ -31,15 +46,28 @@ def show(fig: go.Figure, port: int = PORT) -> None:
             httpd.shutdown()
 
 
-def timeseries_chart(data: Timeseries | dict[str, Timeseries]) -> None:
+def tsplot(data: Timeseries | dict[str, Timeseries]) -> None:
     n_rows = len(data) if isinstance(data, dict) else 1
+    subplot_titles = list(data.keys()) if isinstance(data, dict) else []
+
     fig = FigureResampler(
         make_subplots(
             rows=n_rows,
             cols=1,
             shared_xaxes=True,
+            subplot_titles=subplot_titles,
         )
     )
+
+    # Track trace names for linking across subplots
+    seen_traces: set[str] = set()
+    color_map: dict[str, str] = {}
+    default_colors = SEABORN_DEEP
+
+    def _get_color(_name: str) -> str:
+        if _name not in color_map:
+            color_map[_name] = default_colors[len(color_map) % len(default_colors)]
+        return color_map[_name]
 
     def _add_trace(
         _series: pandas.Series,
@@ -47,12 +75,18 @@ def timeseries_chart(data: Timeseries | dict[str, Timeseries]) -> None:
         _row: int = 1,
     ) -> None:
         _name = _name or "Series"
+        show_legend = _name not in seen_traces
+        seen_traces.add(_name)
+
         fig.add_trace(
             go.Scattergl(
                 name=_name,
+                legendgroup=_name,
+                showlegend=show_legend,
+                line={"color": _get_color(_name), "width": 1},
             ),
-            hf_x=_series.index,
-            hf_y=_series,
+            hf_x=_series.index.to_numpy().copy(),
+            hf_y=_series.to_numpy().copy(),
             row=_row,
             col=1,
         )
@@ -62,11 +96,11 @@ def timeseries_chart(data: Timeseries | dict[str, Timeseries]) -> None:
         _row: int = 1,
     ) -> None:
         if isinstance(_ts, pandas.Series):
-            _add_trace(_ts, _name=_ts.name, _row=_row)
+            _add_trace(_ts, _ts.name, _row)
 
         elif isinstance(_ts, pandas.DataFrame):
             for col in _ts:
-                _add_trace(_ts[col], _name=col, _row=_row)
+                _add_trace(_ts[col], col, _row)
 
         else:
             raise ValueError
@@ -84,5 +118,8 @@ def timeseries_chart(data: Timeseries | dict[str, Timeseries]) -> None:
         port=PORT,
         config={
             "serve_locally": True,
+        },
+        graph_properties={
+            "style": {"height": "100vh"},
         },
     )

@@ -1,1 +1,1 @@
-from ._core import show, timeseries_chart
+from ._core import show, tsplot
