@@ -1,10 +1,11 @@
+import tempfile
 from functools import partial
 from http.server import HTTPServer, SimpleHTTPRequestHandler
-import tempfile
+
 import plotly.graph_objects as go
 
 
-def show_plot(fig: go.Figure, port: int = 8050) -> None:
+def show(fig: go.Figure, port: int = 8050) -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         html_path = f"{temp_dir}/index.html"
         fig.write_html(html_path)

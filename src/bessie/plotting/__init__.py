@@ -1,1 +1,1 @@
-from ._core import show_plot
+from ._core import show

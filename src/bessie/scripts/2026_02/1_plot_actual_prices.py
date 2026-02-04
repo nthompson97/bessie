@@ -8,15 +8,11 @@ def main() -> None:
     start = pandas.Timestamp("2023-01-01 00:00:00")
     end = pandas.Timestamp("2023-02-01 00:00:00")
 
-    df = get_nemseer_data(
+    df = get_nemosis_data(
         start=start,
         end=end,
-        forecast_type="PREDISPATCH",
-        table="PRICE",
+        table="DISPATCHPRICE",
     )
-    print(df)
-
-    actual = get_nemosis_data(start, end, "DISPATCHREGIONSUM")
 
     from IPython import embed
 
