@@ -1,16 +1,29 @@
 import tempfile
 from functools import partial
 from http.server import HTTPServer, SimpleHTTPRequestHandler
-
+import logging
 import pandas
 import plotly
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from plotly_resampler import FigureResampler
+from plotly_resampler import FigureResampler, FigureWidgetResampler
 
 PORT: int = 8050
 
 Timeseries = pandas.Series | pandas.DataFrame
+
+
+def _in_notebook() -> bool:
+    try:
+        from IPython import get_ipython
+
+        shell = get_ipython()
+        if shell is None:
+            return False
+        return shell.__class__.__name__ == "ZMQInteractiveShell"
+
+    except ImportError:
+        return False
 
 # I really like the seaborn colours, so am adding them here manually
 SEABORN_DEEP = [
@@ -50,7 +63,12 @@ def tsplot(data: Timeseries | dict[str, Timeseries]) -> None:
     n_rows = len(data) if isinstance(data, dict) else 1
     subplot_titles = list(data.keys()) if isinstance(data, dict) else []
 
-    fig = FigureResampler(
+    notebook = _in_notebook()
+    logging.info(f"{notebook=}")
+
+    resampler_cls = FigureWidgetResampler if notebook else FigureResampler
+
+    fig = resampler_cls(
         make_subplots(
             rows=n_rows,
             cols=1,
@@ -85,7 +103,7 @@ def tsplot(data: Timeseries | dict[str, Timeseries]) -> None:
                 showlegend=show_legend,
                 line={"color": _get_color(_name), "width": 1},
             ),
-            hf_x=_series.index.to_numpy().copy(),
+            hf_x=_series.index.as_unit("ms") if isinstance(_series.index, pandas.DatetimeIndex) else _series.index,
             hf_y=_series.to_numpy().copy(),
             row=_row,
             col=1,
@@ -112,14 +130,21 @@ def tsplot(data: Timeseries | dict[str, Timeseries]) -> None:
     else:
         _plot_timeseries(data)
 
-    fig.show_dash(
-        mode="external",
-        host="0.0.0.0",
-        port=PORT,
-        config={
-            "serve_locally": True,
-        },
-        graph_properties={
-            "style": {"height": "100vh"},
-        },
-    )
+    if notebook:
+        if n_rows > 1:
+            fig.update_layout(height=300 * n_rows)
+
+        return fig
+
+    else:
+        fig.show_dash(
+            mode="external",
+            host="0.0.0.0",
+            port=PORT,
+            config={
+                "serve_locally": True,
+            },
+            graph_properties={
+                "style": {"height": "100vh"},
+            },
+        )

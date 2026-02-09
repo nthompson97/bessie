@@ -1,15 +1,16 @@
 import logging
 from pathlib import Path
-from typing import Literal
+from typing import Literal, overload
 
 import nemosis
 import nemseer
 import pandas
+import xarray
 
 CACHE_PATH = Path("/data")
 
 
-def _filter_interventions(data: pandas.DataFrame) -> pandas.DataFrame:
+def _filter_interventions_pandas(data: pandas.DataFrame) -> pandas.DataFrame:
     """Filter out intervention periods from data if present.
 
     Checks for an 'INTERVENTION' column and removes rows where it is non-zero,
@@ -30,12 +31,55 @@ def _filter_interventions(data: pandas.DataFrame) -> pandas.DataFrame:
     return data
 
 
+def _filter_interventions_xarray(dataset: xarray.Dataset) -> xarray.Dataset:
+    """Filter out intervention periods from an xarray dataset if present.
+
+    Checks for an 'INTERVENTION' variable and removes points where it is non-zero,
+    logging a warning if any interventions are found.
+    """
+    if "INTERVENTION" not in dataset.data_vars:
+        return dataset
+
+    intervention_mask = dataset["INTERVENTION"] > 0
+    intervention_count = int(intervention_mask.sum().values)
+
+    if intervention_count > 0:
+        logging.warning(
+            f"Found {intervention_count} intervention periods in data, filtering them out"
+        )
+        # Use where with drop=True to remove points where intervention is non-zero
+        return dataset.where(~intervention_mask, drop=True)
+
+    return dataset
+
+
+@overload
 def get_nemseer_data(
     start: pandas.Timestamp,
     end: pandas.Timestamp,
     forecast_type: Literal["P5MIN", "PREDISPATCH", "PDPASA", "STPASA", "MTPASA"],
     table: str,
-) -> pandas.DataFrame:
+    data_format: Literal["df"] = "df",
+) -> pandas.DataFrame: ...
+
+
+@overload
+def get_nemseer_data(
+    start: pandas.Timestamp,
+    end: pandas.Timestamp,
+    forecast_type: Literal["P5MIN", "PREDISPATCH", "PDPASA", "STPASA", "MTPASA"],
+    table: str,
+    data_format: Literal["xr"],
+) -> xarray.Dataset: ...
+
+
+def get_nemseer_data(
+    start: pandas.Timestamp,
+    end: pandas.Timestamp,
+    forecast_type: Literal["P5MIN", "PREDISPATCH", "PDPASA", "STPASA", "MTPASA"],
+    table: str,
+    data_format: Literal["df", "xr"] = "df",
+) -> pandas.DataFrame | xarray.Dataset:
     """Fetch NEM forecast data using nemseer.
 
     Args:
@@ -71,10 +115,19 @@ def get_nemseer_data(
         forecast_type=forecast_type,
         tables=table,
         raw_cache=str(cache_path),
-        data_format="df",
+        data_format=data_format,
     )
 
-    return _filter_interventions(data[table])
+    if data_format == "df":
+        out = _filter_interventions_pandas(data[table])
+
+    elif data_format == "xr":
+        out = _filter_interventions_xarray(data[table])
+
+    else:
+        raise NotImplementedError
+
+    return out
 
 
 def get_nemosis_data(
@@ -108,4 +161,4 @@ def get_nemosis_data(
         raw_data_location=str(cache_path),
     )
 
-    return _filter_interventions(data)
+    return _filter_interventions_pandas(data)

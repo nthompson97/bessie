@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(xxd:*)",
+      "Bash(ls:*)",
+      "Bash(/app/.venv/bin/python:*)",
+      "Bash(/app/.venv/bin/pip index:*)",
+      "Bash(/app/.venv/bin/pip install:*)",
+      "Bash(uv pip show:*)",
+      "WebFetch(domain:community.plotly.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(gh api:*)",
+      "Bash(pip show:*)"
+    ]
+  }
+}

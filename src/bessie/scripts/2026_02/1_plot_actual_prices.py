@@ -8,7 +8,7 @@ from bessie.plotting import tsplot
 
 def main() -> None:
     start = pandas.Timestamp("2023-01-01 00:00:00")
-    end = pandas.Timestamp("2023-02-01 00:00:00")
+    end = pandas.Timestamp("2024-01-01 00:00:00")
 
     price = get_nemosis_data(
         start=start,
