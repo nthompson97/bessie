@@ -1,1 +1,1 @@
-from ._core import show, tsplot
+from ._core import tsplot
