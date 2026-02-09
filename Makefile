@@ -33,6 +33,7 @@ up:
 	podman run -d \
 		--pod $(NAME)-pod \
 		--name $(NAME) \
+		--memory 12g \
 		--volume $(NAME)-bash-history:/home/ubuntu/bash_history \
 		--volume $(NAME)-data:/data \
 		--volume ./:/home/ubuntu/repo/:z \

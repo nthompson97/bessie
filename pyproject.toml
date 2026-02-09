@@ -5,6 +5,7 @@ description = "BESS modelling in the NEM"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "anywidget>=0.9.21",
     "dash>=4.0.0",
     "ipykernel>=6.29.5",
     "ipython>=9.9.0",
