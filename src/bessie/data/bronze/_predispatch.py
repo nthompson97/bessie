@@ -4,8 +4,8 @@ import numpy
 import pandas
 import xarray
 
-from ._core import get_nemseer_data
-from ._decorators import xarray_cache
+from .._core import get_nemseer_data
+from .._decorators import xarray_cache
 
 # TODO: Uncomment the remaining FCAS markets when we address memory a bit better
 DATA_VARS = [
