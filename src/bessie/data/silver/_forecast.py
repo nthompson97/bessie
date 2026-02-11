@@ -18,6 +18,14 @@ def get_one_day_forecast(
 
     This method coalesces these two, using P5MIN as the priority, since it has
     finer resolution and is re-forecast more often.
+
+    Args,
+        start: start timestamp for the requested forecasts
+        end: end timestamp for the requested forecasts
+
+    Returns,
+        Coalesced xarray dataset of P5MIN and PREDISPATCH forecasts
+
     """
     predispatch = get_predispatch_price(start, end)
     p5min = get_p5min_price(start, end)
