@@ -1,30 +1,53 @@
+import numpy
 import abc
-import enum
 from typing import Callable
-
-
-class Action(enum.Enum):
-    Charge = 1
-    Maintain = 0
-    Discharge = -1
 
 
 class Strategy(abc.ABC):
     def __init__(self) -> None: ...
 
     @abc.abstractmethod
-    def action(self) -> Action:
+    def action(
+        self,
+        forecast: numpy.ndarray,
+        soc: float,
+        capacity: float,
+        power: float,
+        last_price: float,
+        day: int,
+    ) -> float:
         """
         Based on provided price and forecast data, produce an action for the
-        strategy.
+        strategy. Action should correspond to the total energy change being
+        undertaken,
+
+            * < 0 corresponds to discharging
+            * = 0 correspondes to no action
+            * > 0 corresponds to charging
+
+        Args,
+            forecast: The forecast for the subsequent 24-hours ($/MWh)
+            soc: The BESS's current State Of Charge (MWh)
+            capacity: The BESS's current maximun capacity (MWh) 
+            power: The maximum power accessible to in one action (MW)
+            last_price: The last 5-minute periods price ($/MWh)
+            day: The unique integer corresponding to the current day
+
+        Returns,
+            float: The total desired energy flows (MW)
         """
         ...
 
     @abc.abstractmethod
-    def action_njit(self) -> Callable[..., Action]:
+    def action_njit(self) -> Callable[..., float]:
         """
         Based on provided price and forecast data, produce an action for the
-        strategy.
+        strategy. Action should correspond to the total energy change being
+        undertaken,
+
+            * < 0 corresponds to discharging
+            * = 0 correspondes to no action
+            * > 0 corresponds to charging
 
         This method must return an njit wrapped function that can be used in
         an njit context.
