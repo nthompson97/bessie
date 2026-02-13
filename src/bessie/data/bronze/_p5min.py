@@ -12,7 +12,7 @@ DATA_VARS = [
 ]
 
 
-@xarray_cache
+# @xarray_cache
 def _get_p5min_price_single(year: int, month: int) -> xarray.Dataset:
     month_start = pandas.Timestamp(year=year, month=month, day=1)
     next_start = month_start + pandas.offsets.MonthBegin()
@@ -22,7 +22,9 @@ def _get_p5min_price_single(year: int, month: int) -> xarray.Dataset:
 
     logging.info(f"{month_start=}")
     logging.info(f"{next_start=}")
-    logging.info(f"Getting P5MIN forecasts from {start:%Y-%m-%d} to {end:%Y-%m-%d}")
+    logging.info(
+        f"Getting P5MIN forecasts from {start:%Y-%m-%d} to {end:%Y-%m-%d}"
+    )
 
     # Annoyingly, reading straight into xarray exceeds memory we can handle.
     # Need to go to pandas first and reduce the number of variables before
@@ -40,38 +42,47 @@ def _get_p5min_price_single(year: int, month: int) -> xarray.Dataset:
         .rename(
             {
                 "REGIONID": "region",
-                "RUN_DATETIME": "run_time",
-                "INTERVAL_DATETIME": "forecasted_time",
+                "RUN_DATETIME": "timestamp",
+                "INTERVAL_DATETIME": "forecast_timestamp",
             }
+        )
+        .assign_coords(
+            timestamp=lambda ds: ds.timestamp - pandas.Timedelta(minutes=5),
+            forecast_timestamp=lambda ds: ds.forecast_timestamp - pandas.Timedelta(minutes=5)
         )
     )
 
-    # For each timestamp under ds.run_time, we want to get rid of the
-    # forecasted_time variable and replace it with a new `step` variable,
+    # For each timestamp under ds.timestamp, we want to get rid of the
+    # forecast_timestamp variable and replace it with a new `step` variable,
     # where each step is the five-minute increment to the forecast time
     n_steps = 12
 
     slices = []
-    for rt in ds.run_time.values:
-        times = pandas.date_range(rt, periods=n_steps, freq="5min")
+    for rt in ds.timestamp.values:
+        times = pandas.date_range(
+            rt,
+            periods=n_steps,
+            freq="5min",
+        )
 
-        # select only forecasted_times that exist in the dataset
-        times = times[times.isin(ds.forecasted_time.values)]
+        # select only forecast_timestamps that exist in the dataset
+        times = times[times.isin(ds.forecast_timestamp.values)]
 
         if len(times) < n_steps:
-            continue  # skip incomplete run_times
+            continue  # skip incomplete timestamps
 
-        sub = ds.sel(run_time=rt, forecasted_time=times)
-        sub = sub.assign_coords(forecasted_time=numpy.arange(n_steps)).rename(
-            {"forecasted_time": "step"}
+        sub = ds.sel(timestamp=rt, forecast_timestamp=times)
+        sub = sub.assign_coords(forecast_timestamp=numpy.arange(n_steps)).rename(
+            {"forecast_timestamp": "step"}
         )
         slices.append(sub)
 
     result: xarray.Dataset = (
-        xarray.concat(slices, dim="run_time").resample(run_time="5min").ffill()
+        xarray.concat(slices, dim="timestamp").resample(timestamp="5min").ffill()
     )
     result = result.sel(
-        run_time=(result.run_time >= month_start) & (result.run_time < next_start)
+        timestamp=(result.timestamp >= month_start)
+        & (result.timestamp < next_start)
     )
 
     return result
@@ -82,6 +93,8 @@ def get_p5min_price(
     end: pandas.Timestamp,
 ) -> xarray.Dataset:
     months = pandas.date_range(start, end, freq="MS")
-    datasets = [_get_p5min_price_single(year=ts.year, month=ts.month) for ts in months]
-    ds = xarray.concat(datasets, dim="run_time")
-    return ds.sel(run_time=(ds.run_time >= start) & (ds.run_time < end))
+    datasets = [
+        _get_p5min_price_single(year=ts.year, month=ts.month) for ts in months
+    ]
+    ds = xarray.concat(datasets, dim="timestamp")
+    return ds.sel(timestamp=(ds.timestamp >= start) & (ds.timestamp < end))

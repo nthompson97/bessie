@@ -33,7 +33,9 @@ def _get_predispatch_price_single(year: int, month: int) -> xarray.Dataset:
 
     logging.info(f"{month_start=}")
     logging.info(f"{next_start=}")
-    logging.info(f"Getting predicted forecasts from {start:%Y-%m-%d} to {end:%Y-%m-%d}")
+    logging.info(
+        f"Getting predicted forecasts from {start:%Y-%m-%d} to {end:%Y-%m-%d}"
+    )
 
     ds = get_nemseer_data(
         start=start,
@@ -43,16 +45,25 @@ def _get_predispatch_price_single(year: int, month: int) -> xarray.Dataset:
         data_format="xr",
     )
     ds = ds[DATA_VARS]
-    ds = ds.resample(forecasted_time="5min").ffill().rename({"REGIONID": "region"})
+    ds = (
+        ds.resample(forecasted_time="5min")
+        .ffill()
+        .rename({"REGIONID": "region"})
+    )
 
     # For each timestamp under ds.run_time, we want to get rid of the
     # forecasted_time variable and replace it with a new `step` variable,
     # where each step is the five-minute increment to the forecast time
+    # TODO: Figure out how we need to shift these around to be start of period
     n_steps = 24 * 12
 
     slices = []
     for rt in ds.run_time.values:
-        times = pandas.date_range(rt, periods=n_steps, freq="5min")
+        times = pandas.date_range(
+            rt + pandas.Timedelta(minutes=5),
+            periods=n_steps,
+            freq="5min",
+        )
 
         # select only forecasted_times that exist in the dataset
         times = times[times.isin(ds.forecasted_time.values)]
@@ -70,7 +81,8 @@ def _get_predispatch_price_single(year: int, month: int) -> xarray.Dataset:
         xarray.concat(slices, dim="run_time").resample(run_time="5min").ffill()
     )
     result = result.sel(
-        run_time=(result.run_time >= month_start) & (result.run_time < next_start)
+        run_time=(result.run_time >= month_start)
+        & (result.run_time < next_start)
     )
 
     return result
@@ -82,7 +94,8 @@ def get_predispatch_price(
 ) -> xarray.Dataset:
     months = pandas.date_range(start, end, freq="MS")
     datasets = [
-        _get_predispatch_price_single(year=ts.year, month=ts.month) for ts in months
+        _get_predispatch_price_single(year=ts.year, month=ts.month)
+        for ts in months
     ]
     ds = xarray.concat(datasets, dim="run_time")
     return ds.sel(run_time=(ds.run_time >= start) & (ds.run_time < end))
