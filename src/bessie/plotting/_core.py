@@ -22,7 +22,27 @@ SEABORN_DEEP = [
 ]
 
 
-def tsplot(data: Timeseries | dict[str, Timeseries]) -> None:
+def tsplot(
+    data: Timeseries | dict[str, Timeseries],
+    *,
+    title: str | None = None,
+    **kwargs,
+) -> FigureWidgetResampler:
+    """
+    Plot timeseries data using plotly with plotly resampler [1].
+
+    Args,
+        data: A Series, DataFrame, or dict of Series/DataFrames. When a dict
+            is provided, each entry is rendered as a separate subplot.
+        title: Optional figure title.
+        **kwargs: Additional keyword arguments passed to ``fig.update_layout``.
+
+    Returns,
+        Figure object for rendering in notebooks.
+
+    References,
+        [1] https://github.com/predict-idlab/plotly-resampler
+    """
     n_rows = len(data) if isinstance(data, dict) else 1
     subplot_titles = list(data.keys()) if isinstance(data, dict) else []
 
@@ -42,7 +62,9 @@ def tsplot(data: Timeseries | dict[str, Timeseries]) -> None:
 
     def _get_color(_name: str) -> str:
         if _name not in color_map:
-            color_map[_name] = default_colors[len(color_map) % len(default_colors)]
+            color_map[_name] = default_colors[
+                len(color_map) % len(default_colors)
+            ]
         return color_map[_name]
 
     def _add_trace(
@@ -93,6 +115,10 @@ def tsplot(data: Timeseries | dict[str, Timeseries]) -> None:
     if n_rows > 1:
         fig.update_layout(height=300 * n_rows)
 
-    fig.update_layout(autosize=True)
+    fig.update_layout(
+        autosize=True,
+        title=title,
+        **kwargs,
+    )
 
     return fig

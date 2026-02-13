@@ -54,3 +54,34 @@ class NaiveBaseline(Strategy):
 
     def action_njit(self) -> Callable[..., float]:
         raise NotImplementedError
+
+
+class ForecastBaseline(NaiveBaseline):
+    """
+    Almost the same as the NaiveBaseline strategy. The only difference being
+    that rather than using the previous price to determine the action, we use
+    the next-periods forecast.
+    """
+
+    def action(
+        self,
+        forecast: numpy.ndarray,
+        soc: float,
+        capacity: float,
+        power: float,
+        last_price: float,
+        day: int,
+    ) -> float:
+        # TODO: handle max actions per day
+
+        if soc < capacity / 2:
+            if forecast[0] < self._charge_limit and soc < capacity:
+                # < 50% SOC and price is low, time to charge
+                return power
+
+        else:
+            if forecast[0] > self._discharge_limit and soc > 0:
+                # > 50% SOC and price is high, time to discharge
+                return -power
+
+        return 0

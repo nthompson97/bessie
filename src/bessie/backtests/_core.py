@@ -1,13 +1,12 @@
 from dataclasses import dataclass
-from typing import Protocol, Any
+from typing import Any
 
 import numpy
 import pandas
 
-from bessie.strategies import Strategy
 from bessie.core import Region
-
 from bessie.data.silver import get_one_day_forecast, get_realised_prices
+from bessie.strategies import Strategy
 
 
 @dataclass
@@ -16,6 +15,10 @@ class BacktestInputData:
     realised: numpy.ndarray  # (n_timestamps,)
     timestamps: pandas.DatetimeIndex  # (n_timestamps,)
     day: numpy.ndarray  # (n_timestamps,) integer day indices
+
+    region: Region
+    start: pandas.Timestamp
+    end: pandas.Timestamp
 
     capacity: float = 50.0  # MWh, battery capacity
     power: float = 50.0  # MW, charge/discharge power rating
@@ -45,6 +48,9 @@ class BacktestInputData:
             realised=realised.sel(region=region.value)["RRP"].to_numpy(),
             timestamps=timestamps,
             day=day,
+            region=region,
+            start=start,
+            end=end,
             **kwargs,
         )
 
@@ -59,21 +65,16 @@ class BacktestInputData:
         Uses actual prices for the forecast. In theory, this should provide
         optimistaions perfect insight into upcoming prices, placing an upper
         bound on performance.
+
+        TODO: Implement this
         """
         ...
 
 
 @dataclass
 class BacktestResults:
-    states: numpy.ndarray  # (n_timestamps,) 0: idle, 1: charging, -1: discharging
+    strategy: Strategy
+    actions: numpy.ndarray  # (n_timestamps,)
     soc: numpy.ndarray  # (n_timestamps,)
     revenue: numpy.ndarray  # (n_timestamps,) period revenue
     capacity: numpy.ndarray  # (n_timestamps,)
-
-
-class BacktestFn(Protocol):
-    def __call__(
-        self,
-        data: BacktestInputData,
-        strategy: Strategy,
-    ) -> BacktestResults: ...
