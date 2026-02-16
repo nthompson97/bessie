@@ -48,41 +48,54 @@ def _get_predispatch_price_single(year: int, month: int) -> xarray.Dataset:
     ds = (
         ds.resample(forecasted_time="5min")
         .ffill()
-        .rename({"REGIONID": "region"})
+        .rename(
+            {
+                "REGIONID": "region",
+                "run_time": "timestamp",
+                "forecasted_time": "forecast_timestamp",
+            }
+        )
+        .assign_coords(
+            timestamp=lambda ds: ds.timestamp - pandas.Timedelta(minutes=30),
+            forecast_timestamp=lambda ds: ds.forecast_timestamp
+            - pandas.Timedelta(minutes=30),
+        )
     )
 
-    # For each timestamp under ds.run_time, we want to get rid of the
+    # For each timestamp under ds.timestamp, we want to get rid of the
     # forecasted_time variable and replace it with a new `step` variable,
     # where each step is the five-minute increment to the forecast time
     # TODO: Figure out how we need to shift these around to be start of period
     n_steps = 24 * 12
 
     slices = []
-    for rt in ds.run_time.values:
+    for rt in ds.timestamp.values:
         times = pandas.date_range(
             rt + pandas.Timedelta(minutes=5),
             periods=n_steps,
             freq="5min",
         )
 
-        # select only forecasted_times that exist in the dataset
-        times = times[times.isin(ds.forecasted_time.values)]
+        # select only forecast_timestamps that exist in the dataset
+        times = times[times.isin(ds.forecast_timestamp.values)]
 
         if len(times) < n_steps:
-            continue  # skip incomplete run_times
+            continue  # skip incomplete timestamps
 
-        sub = ds.sel(run_time=rt, forecasted_time=times)
-        sub = sub.assign_coords(forecasted_time=numpy.arange(n_steps)).rename(
-            {"forecasted_time": "step"}
-        )
+        sub = ds.sel(timestamp=rt, forecast_timestamp=times)
+        sub = sub.assign_coords(
+            forecast_timestamp=numpy.arange(n_steps)
+        ).rename({"forecast_timestamp": "step"})
         slices.append(sub)
 
     result: xarray.Dataset = (
-        xarray.concat(slices, dim="run_time").resample(run_time="5min").ffill()
+        xarray.concat(slices, dim="timestamp")
+        .resample(timestamp="5min")
+        .ffill()
     )
     result = result.sel(
-        run_time=(result.run_time >= month_start)
-        & (result.run_time < next_start)
+        timestamp=(result.timestamp >= month_start)
+        & (result.timestamp < next_start)
     )
 
     return result
@@ -97,5 +110,5 @@ def get_predispatch_price(
         _get_predispatch_price_single(year=ts.year, month=ts.month)
         for ts in months
     ]
-    ds = xarray.concat(datasets, dim="run_time")
-    return ds.sel(run_time=(ds.run_time >= start) & (ds.run_time < end))
+    ds = xarray.concat(datasets, dim="timestamp")
+    return ds.sel(timestamp=(ds.timestamp >= start) & (ds.timestamp < end))

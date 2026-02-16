@@ -6,6 +6,10 @@ from typing import Callable
 class Strategy(abc.ABC):
     def __init__(self) -> None: ...
 
+    @property
+    def name(self) -> str:
+        return type(self).__name__
+
     @abc.abstractmethod
     def action(
         self,

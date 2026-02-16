@@ -40,7 +40,7 @@ class BacktestInputData:
         forecast = get_one_day_forecast(start, end)
         realised = get_realised_prices(start, end)
 
-        timestamps = pandas.DatetimeIndex(forecast["run_time"].to_numpy())
+        timestamps = pandas.DatetimeIndex(forecast["timestamp"].to_numpy())
         day, _ = pandas.factorize(timestamps.date)
 
         return cls(

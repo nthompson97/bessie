@@ -1,3 +1,5 @@
+from typing import Sequence
+
 import numpy
 import pandas
 from plotly_resampler import FigureWidgetResampler
@@ -6,44 +8,59 @@ from bessie.backtests import BacktestInputData, BacktestResults
 from bessie.plotting import tsplot
 
 
+def _result_labels(results: Sequence[BacktestResults]) -> list[str]:
+    counts: dict[str, int] = {}
+    labels: list[str] = []
+    for result in results:
+        name = result.strategy.name
+        counts[name] = counts.get(name, 0) + 1
+        labels.append(name if counts[name] == 1 else f"{name} ({counts[name]})")
+    return labels
+
+
 def backtest_scorecard(
     data: BacktestInputData,
-    results: BacktestResults,
-) -> None:
-    actions = (results.actions != 0).sum()
+    results: BacktestResults | Sequence[BacktestResults],
+) -> pandas.DataFrame:
+    print(f"Region:            {data.region.value}")
+    print(f"Starting capacity: {data.capacity:,.0f} MWh")
+    print(f"Power rating:      {data.power:,.0f} MW")
+    print(f"Degredation rate:  {data.degradation:,.6%}")
+
+    if isinstance(results, BacktestResults):
+        results = [results]
+
     n_days = (data.end - data.start).days
+    columns = {}
 
-    # Metadata
-    print(f"{data.capacity:,.0f}MWh BESS system in {data.region.value}")
-    print(f"From {data.start:%b %d %Y} to {data.end:%b %d %Y}")
-    print()
+    labels = _result_labels(results)
 
-    # Final revenue
-    print(
-        f"Final revenue: ${results.revenue.sum():,.0f} (${results.revenue.sum() / n_days:,.0f} per day)"
-    )
-    print()
+    for label, result in zip(labels, results):
+        n_actions = (result.actions != 0).sum()
 
-    # How often are you actually charging/discharging?
-    print(
-        f"Charging intervals: {(results.actions > 0).sum():,.0f} ({100 * (results.actions > 0).mean():.2f}%)"
-    )
-    print(
-        f"Idle intervals: {(results.actions == 0).sum():,.0f} ({100 * (results.actions == 0).mean():.2f}%)"
-    )
-    print(
-        f"Discharging intervals: {(results.actions < 0).sum():,.0f} ({100 * (results.actions < 0).mean():.2f}%)"
-    )
-    print()
+        columns[label] = {
+            ("Revenue", "Total"): (result.revenue.sum(), "${:,.0f}"),
+            ("Revenue", "Per day"): (result.revenue.sum() / n_days, "${:,.0f}"),
+            ("Activity", "Charging intervals"): ((result.actions > 0).sum(), "{:,.0f}"),
+            ("Activity", "Charging %"): (100 * (result.actions > 0).mean(), "{:.1f}%"),
+            ("Activity", "Idle intervals"): ((result.actions == 0).sum(), "{:,.0f}"),
+            ("Activity", "Idle %"): (100 * (result.actions == 0).mean(), "{:.1f}%"),
+            ("Activity", "Discharging intervals"): ((result.actions < 0).sum(), "{:,.0f}"),
+            ("Activity", "Discharging %"): (100 * (result.actions < 0).mean(), "{:.1f}%"),
+            ("Degradation", "Total actions"): (n_actions, "{:,.0f}"),
+            ("Degradation", "Actions per day"): (n_actions / n_days, "{:,.1f}"),
+            ("Degradation", "Final capacity (MWh)"): (result.capacity[-1], "{:,.2f}"),
+            ("Degradation", "Capacity remaining %"): (
+                100 * result.capacity[-1] / data.capacity, "{:.2f}%",
+            ),
+        }
 
-    # Degredation
-    print(
-        f"Total of {actions:,.0f} actions in {n_days:,.0f} days, ({actions / n_days:,.2f} per day)"
+    df = pandas.DataFrame(
+        {col: {k: fmt.format(val) for k, (val, fmt) in rows.items()}
+         for col, rows in columns.items()}
     )
-    print(f"Degredation rate: {data.degradation:,.6%}")
-    print(
-        f"Final capacity: {results.capacity[-1]:,.2f}MWh ({results.capacity[-1] / data.capacity:.2%} of initial capacity)"
-    )
+    df.index = pandas.MultiIndex.from_tuples(df.index)
+    return df
 
 
 def backtest_tsplot(
@@ -70,4 +87,35 @@ def backtest_tsplot(
             "Market price": pandas.Series(data.realised, index=data.timestamps),
         },
         title=f"Total revenue: ${results.revenue.sum():,.2f}",
+    )
+
+
+def backtest_comparison(
+    data: BacktestInputData,
+    results: BacktestResults | Sequence[BacktestResults],
+) -> FigureWidgetResampler:
+    if isinstance(results, BacktestResults):
+        results = [results]
+
+    labels = _result_labels(results)
+
+    return tsplot(
+        {
+            "State": pandas.DataFrame(
+                {lbl: r.actions for lbl, r in zip(labels, results)},
+                index=data.timestamps,
+            ),
+            "SOC": pandas.DataFrame(
+                {lbl: r.soc for lbl, r in zip(labels, results)},
+                index=data.timestamps,
+            ),
+            "Max Capacity": pandas.DataFrame(
+                {lbl: r.capacity for lbl, r in zip(labels, results)},
+                index=data.timestamps,
+            ),
+            "Cumulative Revenue": pandas.DataFrame(
+                {lbl: r.revenue.cumsum() for lbl, r in zip(labels, results)},
+                index=data.timestamps,
+            ),
+        },
     )

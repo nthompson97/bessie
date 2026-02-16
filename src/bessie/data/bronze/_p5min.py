@@ -12,7 +12,7 @@ DATA_VARS = [
 ]
 
 
-# @xarray_cache
+@xarray_cache
 def _get_p5min_price_single(year: int, month: int) -> xarray.Dataset:
     month_start = pandas.Timestamp(year=year, month=month, day=1)
     next_start = month_start + pandas.offsets.MonthBegin()
@@ -48,7 +48,8 @@ def _get_p5min_price_single(year: int, month: int) -> xarray.Dataset:
         )
         .assign_coords(
             timestamp=lambda ds: ds.timestamp - pandas.Timedelta(minutes=5),
-            forecast_timestamp=lambda ds: ds.forecast_timestamp - pandas.Timedelta(minutes=5)
+            forecast_timestamp=lambda ds: ds.forecast_timestamp
+            - pandas.Timedelta(minutes=5),
         )
     )
 
@@ -72,13 +73,15 @@ def _get_p5min_price_single(year: int, month: int) -> xarray.Dataset:
             continue  # skip incomplete timestamps
 
         sub = ds.sel(timestamp=rt, forecast_timestamp=times)
-        sub = sub.assign_coords(forecast_timestamp=numpy.arange(n_steps)).rename(
-            {"forecast_timestamp": "step"}
-        )
+        sub = sub.assign_coords(
+            forecast_timestamp=numpy.arange(n_steps)
+        ).rename({"forecast_timestamp": "step"})
         slices.append(sub)
 
     result: xarray.Dataset = (
-        xarray.concat(slices, dim="timestamp").resample(timestamp="5min").ffill()
+        xarray.concat(slices, dim="timestamp")
+        .resample(timestamp="5min")
+        .ffill()
     )
     result = result.sel(
         timestamp=(result.timestamp >= month_start)
