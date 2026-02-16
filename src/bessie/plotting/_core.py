@@ -118,6 +118,7 @@ def tsplot(
     fig.update_layout(
         autosize=True,
         title=title,
+        hovermode="x",
         **kwargs,
     )
 

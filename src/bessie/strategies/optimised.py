@@ -11,20 +11,20 @@ TOLERANCE = 1e-4
 
 class OptimisedBase(Strategy):
     """
-    The optimised strategy as described in [1].
+    The optimised strategy as inspired by [1] and [2].
 
     References,
         [1] https://arxiv.org/html/2510.03657v1#Ch2.S4
+        [2] https://www.sciencedirect.com/science/article/pii/S2352152X24025271
     """
 
     def __init__(
         self,
-        max_daily_actions: int,
+        gamma: float,
     ) -> None:
         super().__init__()
 
-        self._max_daily_actions = max_daily_actions
-
+        self._gamma = gamma
         self._problem: Optional[cp.Problem] = None
 
     def _init_problem(self, m: int) -> None:
@@ -43,7 +43,9 @@ class OptimisedBase(Strategy):
         objective = cp.Minimize(
             delta_t
             * cp.sum(
-                cp.multiply(forecast, charge) - cp.multiply(forecast, discharge)
+                cp.multiply(forecast, charge)
+                - cp.multiply(forecast, discharge)
+                + self._gamma * (charge + discharge)
             )
         )
 
@@ -69,7 +71,8 @@ class OptimisedBase(Strategy):
         last_price: float,
         day: int,
     ) -> float:
-        # TODO: handle max actions per day
+        # TODO: Abstract out efficiencies
+        # TODO: Implement limits for capacity, i.e. only range between 5%-95% c_max        
         if numpy.isnan(forecast).any():
             return 0
 
@@ -81,8 +84,8 @@ class OptimisedBase(Strategy):
         self._problem.param_dict["initial_soc"].value = soc
         self._problem.param_dict["power"].value = power
         self._problem.param_dict["capacity"].value = capacity
-        self._problem.param_dict["efficiency_chg"].value = 0.9
-        self._problem.param_dict["efficiency_dchg"].value = 1.0
+        self._problem.param_dict["efficiency_chg"].value = 0.90
+        self._problem.param_dict["efficiency_dchg"].value = 0.95
 
         self._problem.solve()
 
