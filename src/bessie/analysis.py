@@ -1,6 +1,5 @@
 from typing import Sequence
 
-import numpy
 import pandas
 from plotly_resampler import FigureWidgetResampler
 
@@ -22,11 +21,6 @@ def backtest_scorecard(
     data: BacktestInputData,
     results: BacktestResults | Sequence[BacktestResults],
 ) -> pandas.DataFrame:
-    print(f"Region:            {data.region.value}")
-    print(f"Starting capacity: {data.capacity:,.0f} MWh")
-    print(f"Power rating:      {data.power:,.0f} MW")
-    print(f"Degredation rate:  {data.degradation:,.6%}")
-
     if isinstance(results, BacktestResults):
         results = [results]
 
@@ -84,6 +78,13 @@ def backtest_scorecard(
         }
     )
     df.index = pandas.MultiIndex.from_tuples(df.index)
+
+    print(f"Region:            {data.region.value}")
+    print(f"Starting capacity: {data.capacity:,.0f} MWh")
+    print(f"Power rating:      {data.power:,.0f} MW")
+    print(f"Degredation rate:  {data.degradation:,.6%}")
+    print(f"N. Days:           {n_days:,.0f}")
+
     return df
 
 

@@ -1,4 +1,5 @@
-from typing import Callable
+import warnings
+from typing import Callable, Optional
 
 import cvxpy as cp
 import numpy
@@ -24,6 +25,41 @@ class OptimisedBase(Strategy):
 
         self._max_daily_actions = max_daily_actions
 
+        self._problem: Optional[cp.Problem] = None
+
+    def _init_problem(self, m: int) -> None:
+        delta_t = 5 / 60
+
+        forecast = cp.Parameter(m, name="forecast")
+        initial_soc = cp.Parameter(name="initial_soc")
+        power = cp.Parameter(name="power")
+        capacity = cp.Parameter(name="capacity")
+        efficiency_chg = cp.Parameter(name="efficiency_chg")
+        efficiency_dchg = cp.Parameter(name="efficiency_dchg")
+
+        charge = cp.Variable(m, nonneg=True, name="charge")
+        discharge = cp.Variable(m, nonneg=True, name="discharge")
+
+        objective = cp.Minimize(
+            delta_t
+            * cp.sum(
+                cp.multiply(forecast, charge) - cp.multiply(forecast, discharge)
+            )
+        )
+
+        soc = initial_soc + delta_t * cp.cumsum(
+            charge * efficiency_chg - discharge * efficiency_dchg
+        )
+
+        constraints = [
+            soc >= 0,
+            soc <= capacity,
+            charge <= power,
+            discharge <= power,
+        ]
+
+        self._problem = cp.Problem(objective=objective, constraints=constraints)
+
     def action(
         self,
         forecast: numpy.ndarray,
@@ -34,66 +70,30 @@ class OptimisedBase(Strategy):
         day: int,
     ) -> float:
         # TODO: handle max actions per day
-        (m,) = forecast.shape
-        delta_t = 5 / 60
-
         if numpy.isnan(forecast).any():
             return 0
 
-        param_price = cp.Parameter(m)
-        param_initial_soc = cp.Parameter()
-        param_capacity = cp.Parameter()
+        if self._problem is None:
+            (m,) = forecast.shape
+            self._init_problem(m)
 
-        var_charge = cp.Variable(m, nonneg=True)
-        var_discharge = cp.Variable(m, nonneg=True)
-        var_soc = cp.Variable(m, nonneg=True)
-        var_binary = cp.Variable(m, boolean=True)
-        var_active = cp.Variable(m, boolean=True)
+        self._problem.param_dict["forecast"].value = forecast
+        self._problem.param_dict["initial_soc"].value = soc
+        self._problem.param_dict["power"].value = power
+        self._problem.param_dict["capacity"].value = capacity
+        self._problem.param_dict["efficiency_chg"].value = 0.9
+        self._problem.param_dict["efficiency_dchg"].value = 1.0
 
-        objective = cp.Maximize(
-            -cp.sum(cp.multiply(param_price, var_charge * delta_t))
-            + cp.sum(cp.multiply(param_price, var_discharge * delta_t))
-        )
-        constraints = [
-            # Energy balance
-            var_soc[0]
-            == param_initial_soc
-            + var_charge[0] * delta_t
-            - var_discharge[0] * delta_t,
-            var_soc[1:]
-            == var_soc[:-1]
-            + var_charge[1:] * delta_t
-            - var_discharge[1:] * delta_t,
-            # SOC bounds
-            var_soc >= 0,
-            var_soc <= param_capacity,
-            # Power constraints
-            var_charge >= 0,
-            var_charge <= power,
-            var_discharge >= 0,
-            var_discharge <= power,
-            # Mutually exclusive
-            var_charge <= power * var_binary,
-            var_discharge <= power * (1 - var_binary),
-            # Active
-            var_charge <= power * var_active,
-            var_discharge <= power * var_active,
-            cp.sum(var_active) <= 10,
-        ]
+        self._problem.solve()
 
-        problem = cp.Problem(objective=objective, constraints=constraints)
-
-        param_capacity.value = capacity
-        param_initial_soc.value = soc
-        param_price.value = forecast
-
-        problem.solve()
-
-        charge = var_charge.value[0]
-        discharge = var_discharge.value[0]
+        charge = self._problem.var_dict["charge"].value[0]
+        discharge = self._problem.var_dict["discharge"].value[0]
 
         if charge >= TOLERANCE and discharge >= TOLERANCE:
-            raise ValueError
+            warnings.warn(
+                f"Actions to both charge and discharge simultaneously issued, defaulting to no action: {charge} and {discharge}"
+            )
+            return 0
 
         elif charge >= TOLERANCE:
             return charge
