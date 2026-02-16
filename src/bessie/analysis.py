@@ -41,23 +41,47 @@ def backtest_scorecard(
         columns[label] = {
             ("Revenue", "Total"): (result.revenue.sum(), "${:,.0f}"),
             ("Revenue", "Per day"): (result.revenue.sum() / n_days, "${:,.0f}"),
-            ("Activity", "Charging intervals"): ((result.actions > 0).sum(), "{:,.0f}"),
-            ("Activity", "Charging %"): (100 * (result.actions > 0).mean(), "{:.1f}%"),
-            ("Activity", "Idle intervals"): ((result.actions == 0).sum(), "{:,.0f}"),
-            ("Activity", "Idle %"): (100 * (result.actions == 0).mean(), "{:.1f}%"),
-            ("Activity", "Discharging intervals"): ((result.actions < 0).sum(), "{:,.0f}"),
-            ("Activity", "Discharging %"): (100 * (result.actions < 0).mean(), "{:.1f}%"),
+            ("Activity", "Charging intervals"): (
+                (result.actions > 0).sum(),
+                "{:,.0f}",
+            ),
+            ("Activity", "Charging %"): (
+                100 * (result.actions > 0).mean(),
+                "{:.1f}%",
+            ),
+            ("Activity", "Idle intervals"): (
+                (result.actions == 0).sum(),
+                "{:,.0f}",
+            ),
+            ("Activity", "Idle %"): (
+                100 * (result.actions == 0).mean(),
+                "{:.1f}%",
+            ),
+            ("Activity", "Discharging intervals"): (
+                (result.actions < 0).sum(),
+                "{:,.0f}",
+            ),
+            ("Activity", "Discharging %"): (
+                100 * (result.actions < 0).mean(),
+                "{:.1f}%",
+            ),
             ("Degradation", "Total actions"): (n_actions, "{:,.0f}"),
             ("Degradation", "Actions per day"): (n_actions / n_days, "{:,.1f}"),
-            ("Degradation", "Final capacity (MWh)"): (result.capacity[-1], "{:,.2f}"),
+            ("Degradation", "Final capacity (MWh)"): (
+                result.capacity[-1],
+                "{:,.2f}",
+            ),
             ("Degradation", "Capacity remaining %"): (
-                100 * result.capacity[-1] / data.capacity, "{:.2f}%",
+                100 * result.capacity[-1] / data.capacity,
+                "{:.2f}%",
             ),
         }
 
     df = pandas.DataFrame(
-        {col: {k: fmt.format(val) for k, (val, fmt) in rows.items()}
-         for col, rows in columns.items()}
+        {
+            col: {k: fmt.format(val) for k, (val, fmt) in rows.items()}
+            for col, rows in columns.items()
+        }
     )
     df.index = pandas.MultiIndex.from_tuples(df.index)
     return df
@@ -117,5 +141,6 @@ def backtest_comparison(
                 {lbl: r.revenue.cumsum() for lbl, r in zip(labels, results)},
                 index=data.timestamps,
             ),
+            "Market price": pandas.Series(data.realised, index=data.timestamps),
         },
     )
