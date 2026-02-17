@@ -1,5 +1,5 @@
 import logging
-
+import warnings
 import numpy
 
 from bessie.strategies import Strategy
@@ -52,13 +52,18 @@ def bess_backtest(
             day=data.day[i],
         )
 
+        if action < -1.0 or action > 1.0:
+            warnings.warn(
+                f"Strategy {strategy.name} produced action {action} at index {i}, which is outside the expected range [-1.0, 1.0]. Clipping to range."
+            )
+            action = max(min(action, 1.0), -1.0)
+
         logging.debug(i, c_soc, c_max, p_max, data.realised[i - 1], action)
 
         if action > 0:
             # Charging
-            # TODO: properly address the magnitude of the action
             c_max *= 1 - deg
-            p_action = min(p_max * dt, c_max - c_soc)
+            p_action = min(action * p_max * dt, c_max - c_soc)
             p_actual = p_action * eta_chg
 
         elif action == 0:
@@ -68,9 +73,8 @@ def bess_backtest(
 
         elif action < 0:
             # Discharging
-            # TODO: properly address the magnitude of the action
             c_max *= 1 - deg
-            p_action = -min(p_max * dt, c_soc)
+            p_action = -min(-action * p_max * dt, c_soc)
             p_actual = p_action * eta_dchg
 
         else:

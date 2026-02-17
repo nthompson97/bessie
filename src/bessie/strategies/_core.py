@@ -25,7 +25,8 @@ class Strategy(abc.ABC):
         """
         Based on provided price and forecast data, produce an action for the
         strategy. Action should correspond to the total energy change being
-        undertaken,
+        undertaken, valued between [-1.0 1.0] representing a percentage of 
+        p_max, where,
 
             * < 0 corresponds to discharging
             * = 0 correspondes to no action
@@ -51,7 +52,8 @@ class Strategy(abc.ABC):
         """
         Based on provided price and forecast data, produce an action for the
         strategy. Action should correspond to the total energy change being
-        undertaken,
+        undertaken, valued between [-1.0 1.0] representing a percentage of 
+        p_max, where,
 
             * < 0 corresponds to discharging
             * = 0 correspondes to no action

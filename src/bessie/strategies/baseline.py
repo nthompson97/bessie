@@ -45,12 +45,12 @@ class NaiveBaseline(Strategy):
         if c_soc < c_max / 2:
             if last_price < self._charge_limit and c_soc < c_max:
                 # < 50% SOC and price is low, time to charge
-                return p_max
+                return +1.0
 
         else:
             if last_price > self._discharge_limit and c_soc > 0:
                 # > 50% SOC and price is high, time to discharge
-                return -p_max
+                return -1.0
 
         return 0
 
@@ -81,11 +81,11 @@ class ForecastBaseline(NaiveBaseline):
         if c_soc < c_max / 2:
             if forecast[0] < self._charge_limit and c_soc < c_max:
                 # < 50% SOC and price is low, time to charge
-                return p_max
+                return +1.0
 
         else:
             if forecast[0] > self._discharge_limit and c_soc > 0:
                 # > 50% SOC and price is high, time to discharge
-                return -p_max
+                return -1.0
 
         return 0

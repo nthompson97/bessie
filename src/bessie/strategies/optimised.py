@@ -104,10 +104,10 @@ class OptimisedBase(Strategy):
             return 0
 
         elif p_charge >= TOLERANCE:
-            return p_charge
+            return p_charge / p_max
 
         elif p_discharge >= TOLERANCE:
-            return -p_discharge
+            return -p_discharge / p_max
 
         else:
             return 0
