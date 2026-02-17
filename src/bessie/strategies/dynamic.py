@@ -3,12 +3,12 @@ from typing import Callable
 import numpy
 from numba import njit
 
-from ._core import Strategy
+from ._core import NJITStrategy
 
 PLACEHOLDER = -numpy.inf
 
 
-@njit
+@njit(cache=True)
 def _foo(
     t: int,
     i: int,
@@ -81,7 +81,7 @@ def _foo(
     return _best
 
 
-@njit
+@njit(cache=True)
 def solve_battery_dp(
     forecast_arr: numpy.ndarray,
     c_init: float,
@@ -92,10 +92,6 @@ def solve_battery_dp(
     gamma_val: float,
     n_soc: int = 100,
 ) -> float:
-    # TODO: I really don't think the value function needs to be so complex. I 
-    # also don't think we need to re-write all the logic for finding the first
-    # action, ideally the value function would return the optimal value and the
-    # associated action, but alas.
     dt = 5 / 60
     m = len(forecast_arr)
 
@@ -157,7 +153,7 @@ def solve_battery_dp(
     return _action
 
 
-class DPOptimised(Strategy):
+class DPOptimised(NJITStrategy):
     def __init__(
         self,
         gamma: float = 0,
@@ -205,4 +201,27 @@ class DPOptimised(Strategy):
         )
 
     def action_njit(self) -> Callable[..., float]:
-        raise NotImplementedError
+        gamma = float(self._gamma)
+
+        @njit
+        def _action(
+            forecast: numpy.ndarray,
+            c_soc: float,
+            c_max: float,
+            p_max: float,
+            eta_chg: float,
+            eta_dchg: float,
+            last_price: float,
+            day: int,
+        ) -> float:
+            return solve_battery_dp(
+                forecast_arr=forecast,
+                c_init=c_soc,
+                c_max_val=c_max,
+                p_max_val=p_max,
+                eta_c=eta_chg,
+                eta_d=eta_dchg,
+                gamma_val=gamma,
+            )
+
+        return _action

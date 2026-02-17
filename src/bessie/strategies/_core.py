@@ -25,7 +25,7 @@ class Strategy(abc.ABC):
         """
         Based on provided price and forecast data, produce an action for the
         strategy. Action should correspond to the total energy change being
-        undertaken, valued between [-1.0 1.0] representing a percentage of 
+        undertaken, valued between [-1.0 1.0] representing a percentage of
         p_max, where,
 
             * < 0 corresponds to discharging
@@ -35,7 +35,7 @@ class Strategy(abc.ABC):
         Args,
             forecast: The forecast for the subsequent 24-hours ($/MWh)
             c_soc: The BESS's current State Of Charge (MWh)
-            c_max: The BESS's current maximun capacity (MWh) 
+            c_max: The BESS's current maximun capacity (MWh)
             p_max: The maximum power accessible to in one action (MW)
             eta_chg: The charging efficiency of the BESS
             eta_dchg: The discharging efficiency of the BESS
@@ -47,19 +47,16 @@ class Strategy(abc.ABC):
         """
         ...
 
+
+class NJITStrategy(Strategy):
     @abc.abstractmethod
     def action_njit(self) -> Callable[..., float]:
         """
-        Based on provided price and forecast data, produce an action for the
-        strategy. Action should correspond to the total energy change being
-        undertaken, valued between [-1.0 1.0] representing a percentage of 
-        p_max, where,
+        Returns an @njit-compiled callable that can be invoked inside a numba
+        nopython context. The returned function must have the signature:
 
-            * < 0 corresponds to discharging
-            * = 0 correspondes to no action
-            * > 0 corresponds to charging
+            (forecast, c_soc, c_max, p_max, eta_chg, eta_dchg, last_price, day) -> float
 
-        This method must return an njit wrapped function that can be used in
-        an njit context.
+        where the return value has the same semantics as action().
         """
         ...

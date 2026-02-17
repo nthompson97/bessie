@@ -1,5 +1,3 @@
-from typing import Callable
-
 import numpy
 
 from ._core import Strategy
@@ -53,10 +51,6 @@ class NaiveBaseline(Strategy):
                 return -1.0
 
         return 0
-
-    def action_njit(self) -> Callable[..., float]:
-        raise NotImplementedError
-
 
 class ForecastBaseline(NaiveBaseline):
     """

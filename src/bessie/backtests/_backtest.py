@@ -12,7 +12,8 @@ def bess_backtest(
 ) -> BacktestResults:
     """
     Backtesting framework for a particular Strategy with the provided input
-    data.
+    data. If the strategy implements NJITStrategy, the njit-compiled backtest
+    loop is used automatically.
 
     Args,
         data: Input data for the backtest, usually consisting of forecasts,
@@ -24,6 +25,8 @@ def bess_backtest(
         A BacktestResults object containing  data for each timestep in the
             backtest period.
     """
+    logging.info(f"Running BESS backtest for strategy {strategy.name}")
+
     c_soc = 0.0  # Current SOC (MWh)
     c_max = float(data.c_init)  # Current max battery capacity (MWh)
     p_max = float(data.p_max)  # Max charge/discharge power rating (MW)

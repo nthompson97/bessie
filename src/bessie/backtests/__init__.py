@@ -1,2 +1,2 @@
 from ._models import BacktestInputData, BacktestResults
-from ._backtest import bess_backtest
+from ._core import run_backtest
