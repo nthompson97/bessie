@@ -68,11 +68,11 @@ class OptimisedBase(Strategy):
         c_soc: float,
         c_max: float,
         p_max: float,
+        eta_chg: float,
+        eta_dchg: float,
         last_price: float,
         day: int,
     ) -> float:
-        # TODO: Abstract out efficiencies
-        # TODO: Implement limits for c_max, i.e. only range between 5%-95% c_max        
         if numpy.isnan(forecast).any():
             return 0
 
@@ -80,12 +80,17 @@ class OptimisedBase(Strategy):
             (m,) = forecast.shape
             self._init_problem(m)
 
+            if eta_chg == eta_dchg:
+                raise ValueError(
+                    f"Charging and discharging efficiencies must differ for optimiser, got {eta_chg} and {eta_dchg}"
+                )
+
         self._problem.param_dict["forecast"].value = forecast
         self._problem.param_dict["c_initial"].value = c_soc
         self._problem.param_dict["p_max"].value = p_max
         self._problem.param_dict["c_max"].value = c_max
-        self._problem.param_dict["eta_chg"].value = 0.90
-        self._problem.param_dict["eta_dchg"].value = 0.95
+        self._problem.param_dict["eta_chg"].value = eta_chg
+        self._problem.param_dict["eta_dchg"].value = eta_dchg
 
         self._problem.solve()
 

@@ -24,6 +24,8 @@ class BacktestInputData:
     p_max: float = 50.0  # MW, max charge/discharge power rating
     deg: float = 0.0  # degradation rate per action
     dt: float = 5 / 60  # time step in hours
+    eta_chg: float = 0.90  # charging efficiency
+    eta_dchg: float = 0.95  # discharging efficiency
 
     @classmethod
     def from_aemo_forecasts(

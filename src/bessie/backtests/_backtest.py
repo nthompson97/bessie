@@ -28,9 +28,10 @@ def bess_backtest(
     c_soc = 0.0  # Current SOC (MWh)
     c_max = float(data.c_init)  # Current max battery capacity (MWh)
     p_max = float(data.p_max)  # Max charge/discharge power rating (MW)
-    deg = float(
-        data.deg
-    )  # Battery degradation rate (0 for now)
+    eta_chg = float(data.eta_chg)  # Charging efficiency
+    eta_dchg = float(data.eta_dchg)  # Discharging efficiency
+    deg = float(data.deg)  # Battery degradation rate (0 for now)
+    dt = float(data.dt)  # Time step duration (hours)
 
     (n,) = data.realised.shape
 
@@ -45,6 +46,8 @@ def bess_backtest(
             c_soc=c_soc,
             c_max=c_max,
             p_max=p_max,
+            eta_chg=eta_chg,
+            eta_dchg=eta_dchg,
             last_price=data.realised[i - 1],
             day=data.day[i],
         )
@@ -54,28 +57,31 @@ def bess_backtest(
         if action > 0:
             # Charging
             # TODO: properly address the magnitude of the action
-            energy = min(p_max * data.dt, c_max - c_soc)
             c_max *= 1 - deg
+            p_action = min(p_max * dt, c_max - c_soc)
+            p_actual = p_action * eta_chg
 
         elif action == 0:
             # Idling
-            energy = 0
+            p_action = 0
+            p_actual = 0
 
         elif action < 0:
             # Discharging
             # TODO: properly address the magnitude of the action
-            energy = -min(p_max * data.dt, c_soc)
             c_max *= 1 - deg
+            p_action = -min(p_max * dt, c_soc)
+            p_actual = p_action * eta_dchg
 
         else:
             raise ValueError
 
-        c_soc += energy
+        c_soc += p_actual
 
-        output_p_actions[i] = energy
+        output_p_actions[i] = p_action
         output_c_soc[i] = c_soc
         output_c_max[i] = c_max
-        output_revenue[i] = -energy * data.realised[i]
+        output_revenue[i] = -p_action * data.realised[i]
 
     return BacktestResults(
         strategy=strategy,

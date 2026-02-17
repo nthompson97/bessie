@@ -35,6 +35,8 @@ class NaiveBaseline(Strategy):
         c_soc: float,
         c_max: float,
         p_max: float,
+        eta_chg: float,
+        eta_dchg: float,
         last_price: float,
         day: int,
     ) -> float:
@@ -69,6 +71,8 @@ class ForecastBaseline(NaiveBaseline):
         c_soc: float,
         c_max: float,
         p_max: float,
+        eta_chg: float,
+        eta_dchg: float,
         last_price: float,
         day: int,
     ) -> float:
