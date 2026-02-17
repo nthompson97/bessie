@@ -11,7 +11,8 @@
       "WebFetch(domain:community.plotly.com)",
       "WebFetch(domain:github.com)",
       "Bash(gh api:*)",
-      "Bash(pip show:*)"
+      "Bash(pip show:*)",
+      "Bash(find:*)"
     ]
   }
 }

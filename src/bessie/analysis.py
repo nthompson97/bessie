@@ -83,8 +83,8 @@ def backtest_scorecard(
     print(f"Starting capacity: {data.c_init:,.0f} MWh")
     print(f"Power rating:      {data.p_max:,.0f} MW")
     print(f"Degredation rate:  {data.deg:,.6%}")
-    print(f"η (charge):        {data.eta_chg:.2%}")
-    print(f"η (discharg):      {data.eta_dchg:.2%}")
+    print(f"η (charge):        {data.eta_chg:.1%}")
+    print(f"η (discharg):      {data.eta_dchg:.1%}")
     print(f"N. Days:           {n_days:,.0f}")
 
     return df
