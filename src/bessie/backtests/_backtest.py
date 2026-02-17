@@ -3,7 +3,7 @@ import numpy
 
 from bessie.strategies import Strategy
 
-from ._core import BacktestInputData, BacktestResults
+from ._models import BacktestInputData, BacktestResults
 
 
 def bess_backtest(

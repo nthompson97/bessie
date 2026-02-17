@@ -1,48 +1,84 @@
-import warnings
 from typing import Callable
-from numba import njit
-import cvxpy as cp
+
 import numpy
+from numba import njit
 
 from ._core import Strategy
 
-TOLERANCE = 1e-4
-
-SENTINEL = -numpy.inf
+PLACEHOLDER = -numpy.inf
 
 
 @njit
-def _value(t, i, m, n_soc, steps_chg, steps_dchg, forecast_arr, gamma_val, p_max_val, dt_val, memo):
-    """Minimum cost from timestep t onwards, starting at SoC index i."""
-    if t == m:
+def _foo(
+    t: int,
+    i: int,
+    di_chg: int,
+    di_dchg: int,
+    forecast_arr: numpy.ndarray,
+    gamma_val: float,
+    p_max_val: float,
+    cache: numpy.ndarray,
+) -> float:
+    """
+    Minimum cost from timestep t onwards, starting at SoC index i.
+    """
+    if t == forecast_arr.shape[0]:
         return 0.0
 
-    if memo[t, i] != SENTINEL:
-        return memo[t, i]
+    if cache[t, i] != PLACEHOLDER:
+        return cache[t, i]
 
-    price = forecast_arr[t]
-    cost_chg = (price + gamma_val) * p_max_val * dt_val
-    cost_dchg = (-price + gamma_val) * p_max_val * dt_val
+    _dt = 5 / 60
+    _price = forecast_arr[t]
+    _cost_chg = (_price + gamma_val) * p_max_val * _dt
+    _cost_dchg = (-_price + gamma_val) * p_max_val * _dt
 
     # Idle
-    best = _value(t + 1, i, m, n_soc, steps_chg, steps_dchg, forecast_arr, gamma_val, p_max_val, dt_val, memo)
+    _best = _foo(
+        t=t + 1,
+        i=i,
+        di_chg=di_chg,
+        di_dchg=di_dchg,
+        forecast_arr=forecast_arr,
+        gamma_val=gamma_val,
+        p_max_val=p_max_val,
+        cache=cache,
+    )
 
     # Charge
-    j = i + steps_chg
-    if j < n_soc:
-        c = cost_chg + _value(t + 1, j, m, n_soc, steps_chg, steps_dchg, forecast_arr, gamma_val, p_max_val, dt_val, memo)
-        if c < best:
-            best = c
+    j = i + di_chg
+    if j < cache.shape[1]:
+        _val = _cost_chg + _foo(
+            t=t + 1,
+            i=j,
+            di_chg=di_chg,
+            di_dchg=di_dchg,
+            forecast_arr=forecast_arr,
+            gamma_val=gamma_val,
+            p_max_val=p_max_val,
+            cache=cache,
+        )
+        if _val < _best:
+            _best = _val
 
     # Discharge
-    j = i - steps_dchg
+    j = i - di_dchg
     if j >= 0:
-        c = cost_dchg + _value(t + 1, j, m, n_soc, steps_chg, steps_dchg, forecast_arr, gamma_val, p_max_val, dt_val, memo)
-        if c < best:
-            best = c
+        _val = _cost_dchg + _foo(
+            t=t + 1,
+            i=j,
+            di_chg=di_chg,
+            di_dchg=di_dchg,
+            forecast_arr=forecast_arr,
+            gamma_val=gamma_val,
+            p_max_val=p_max_val,
+            cache=cache,
+        )
+        if _val < _best:
+            _best = _val
 
-    memo[t, i] = best
-    return best
+    cache[t, i] = _best
+    return _best
 
 
 @njit
@@ -54,49 +90,71 @@ def solve_battery_dp(
     eta_c: float,
     eta_d: float,
     gamma_val: float,
-    dt_val: float = 5.0 / 60.0,
-    n_soc: int = 500,
+    n_soc: int = 100,
 ) -> float:
+    # TODO: I really don't think the value function needs to be so complex. I 
+    # also don't think we need to re-write all the logic for finding the first
+    # action, ideally the value function would return the optimal value and the
+    # associated action, but alas.
+    dt = 5 / 60
     m = len(forecast_arr)
 
     soc_step = c_max_val / (n_soc - 1)
-    steps_chg = int(round(dt_val * eta_c * p_max_val / soc_step))
-    steps_dchg = int(round(dt_val * eta_d * p_max_val / soc_step))
+    di_chg = int(round(dt * eta_c * p_max_val / soc_step))
+    di_dchg = int(round(dt * eta_d * p_max_val / soc_step))
     i_init = min(max(int(round(c_init / soc_step)), 0), n_soc - 1)
 
-    memo = numpy.full((m, n_soc), SENTINEL)
+    cache = numpy.full((m, n_soc), PLACEHOLDER)
 
-    # Recover the optimal first action by comparing the three choices
-    price = forecast_arr[0]
-    cost_chg = (price + gamma_val) * p_max_val * dt_val
-    cost_dchg = (-price + gamma_val) * p_max_val * dt_val
+    # Recover first action by comparing the three choices at t=0 explicitly
+    _price = forecast_arr[0]
+    _cost_chg = (_price + gamma_val) * p_max_val * dt
+    _cost_dchg = (-_price + gamma_val) * p_max_val * dt
 
-    best = numpy.inf
-    action = 0.0
+    _best = _foo(
+        t=1,
+        i=i_init,
+        di_chg=di_chg,
+        di_dchg=di_dchg,
+        forecast_arr=forecast_arr,
+        gamma_val=gamma_val,
+        p_max_val=p_max_val,
+        cache=cache,
+    )
+    _action = 0.0
 
-    # Idle
-    c = _value(1, i_init, m, n_soc, steps_chg, steps_dchg, forecast_arr, gamma_val, p_max_val, dt_val, memo)
-    if c < best:
-        best = c
-        action = 0.0
-
-    # Charge
-    j = i_init + steps_chg
+    j = i_init + di_chg
     if j < n_soc:
-        c = cost_chg + _value(1, j, m, n_soc, steps_chg, steps_dchg, forecast_arr, gamma_val, p_max_val, dt_val, memo)
-        if c < best:
-            best = c
-            action = 1.0
+        _val = _cost_chg + _foo(
+            t=1,
+            i=j,
+            di_chg=di_chg,
+            di_dchg=di_dchg,
+            forecast_arr=forecast_arr,
+            gamma_val=gamma_val,
+            p_max_val=p_max_val,
+            cache=cache,
+        )
+        if _val < _best:
+            _best = _val
+            _action = 1.0
 
-    # Discharge
-    j = i_init - steps_dchg
+    j = i_init - di_dchg
     if j >= 0:
-        c = cost_dchg + _value(1, j, m, n_soc, steps_chg, steps_dchg, forecast_arr, gamma_val, p_max_val, dt_val, memo)
-        if c < best:
-            best = c
-            action = -1.0
+        _val = _cost_dchg + _foo(
+            t=1,
+            i=j,
+            di_chg=di_chg,
+            di_dchg=di_dchg,
+            forecast_arr=forecast_arr,
+            gamma_val=gamma_val,
+            p_max_val=p_max_val,
+            cache=cache,
+        )
+        if _val < _best:
+            _action = -1.0
 
-    return action
+    return _action
 
 
 class DPOptimised(Strategy):
@@ -144,9 +202,7 @@ class DPOptimised(Strategy):
             eta_c=eta_chg,
             eta_d=eta_dchg,
             gamma_val=float(self._gamma),
-            dt_val=5/60,
         )
-
 
     def action_njit(self) -> Callable[..., float]:
         raise NotImplementedError
