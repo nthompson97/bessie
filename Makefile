@@ -24,11 +24,22 @@ up:
 		podman volume create $(NAME)-data; \
 	fi
 
-	# 8050: plotly,
+	@if ! podman volume exists $(NAME)-grafana-data 2>/dev/null; then \
+		podman volume create $(NAME)-grafana-data; \
+	fi
+
+	# Ports: 8050=plotly, 3000=grafana
 	podman pod create \
 		--name $(NAME)-pod \
 		--userns keep-id \
-		--publish 8050:8050
+		--publish 8050:8050 \
+		--publish 3000:3000
+
+	podman run -d \
+		--pod $(NAME)-pod \
+		--name $(NAME)-grafana \
+		--volume $(NAME)-grafana-data:/var/lib/grafana \
+		docker.io/grafana/grafana:latest
 
 	podman run -d \
 		--pod $(NAME)-pod \

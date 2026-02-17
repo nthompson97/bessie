@@ -28,36 +28,36 @@ class OptimisedBase(Strategy):
         self._problem: Optional[cp.Problem] = None
 
     def _init_problem(self, m: int) -> None:
-        delta_t = 5 / 60
+        dt = 5 / 60
 
         forecast = cp.Parameter(m, name="forecast")
-        initial_soc = cp.Parameter(name="initial_soc")
-        power = cp.Parameter(name="power")
-        capacity = cp.Parameter(name="capacity")
-        efficiency_chg = cp.Parameter(name="efficiency_chg")
-        efficiency_dchg = cp.Parameter(name="efficiency_dchg")
+        c_initial = cp.Parameter(name="c_initial")
+        p_max = cp.Parameter(name="p_max")
+        c_max = cp.Parameter(name="c_max")
+        eta_chg = cp.Parameter(name="eta_chg")
+        eta_dchg = cp.Parameter(name="eta_dchg")
 
-        charge = cp.Variable(m, nonneg=True, name="charge")
-        discharge = cp.Variable(m, nonneg=True, name="discharge")
+        p_charge = cp.Variable(m, nonneg=True, name="p_charge")
+        p_discharge = cp.Variable(m, nonneg=True, name="p_discharge")
 
         objective = cp.Minimize(
-            delta_t
+            dt
             * cp.sum(
-                cp.multiply(forecast, charge)
-                - cp.multiply(forecast, discharge)
-                + self._gamma * (charge + discharge)
+                cp.multiply(forecast, p_charge)
+                - cp.multiply(forecast, p_discharge)
+                + self._gamma * (p_charge + p_discharge)
             )
         )
 
-        soc = initial_soc + delta_t * cp.cumsum(
-            charge * efficiency_chg - discharge * efficiency_dchg
+        c_soc = c_initial + dt * cp.cumsum(
+            p_charge * eta_chg - p_discharge * eta_dchg
         )
 
         constraints = [
-            soc >= 0,
-            soc <= capacity,
-            charge <= power,
-            discharge <= power,
+            c_soc >= 0,
+            c_soc <= c_max,
+            p_charge <= p_max,
+            p_discharge <= p_max,
         ]
 
         self._problem = cp.Problem(objective=objective, constraints=constraints)
@@ -65,14 +65,14 @@ class OptimisedBase(Strategy):
     def action(
         self,
         forecast: numpy.ndarray,
-        soc: float,
-        capacity: float,
-        power: float,
+        c_soc: float,
+        c_max: float,
+        p_max: float,
         last_price: float,
         day: int,
     ) -> float:
         # TODO: Abstract out efficiencies
-        # TODO: Implement limits for capacity, i.e. only range between 5%-95% c_max        
+        # TODO: Implement limits for c_max, i.e. only range between 5%-95% c_max        
         if numpy.isnan(forecast).any():
             return 0
 
@@ -81,28 +81,28 @@ class OptimisedBase(Strategy):
             self._init_problem(m)
 
         self._problem.param_dict["forecast"].value = forecast
-        self._problem.param_dict["initial_soc"].value = soc
-        self._problem.param_dict["power"].value = power
-        self._problem.param_dict["capacity"].value = capacity
-        self._problem.param_dict["efficiency_chg"].value = 0.90
-        self._problem.param_dict["efficiency_dchg"].value = 0.95
+        self._problem.param_dict["c_initial"].value = c_soc
+        self._problem.param_dict["p_max"].value = p_max
+        self._problem.param_dict["c_max"].value = c_max
+        self._problem.param_dict["eta_chg"].value = 0.90
+        self._problem.param_dict["eta_dchg"].value = 0.95
 
         self._problem.solve()
 
-        charge = self._problem.var_dict["charge"].value[0]
-        discharge = self._problem.var_dict["discharge"].value[0]
+        p_charge = self._problem.var_dict["p_charge"].value[0]
+        p_discharge = self._problem.var_dict["p_discharge"].value[0]
 
-        if charge >= TOLERANCE and discharge >= TOLERANCE:
+        if p_charge >= TOLERANCE and p_discharge >= TOLERANCE:
             warnings.warn(
-                f"Actions to both charge and discharge simultaneously issued, defaulting to no action: {charge} and {discharge}"
+                f"Actions to both charge and discharge simultaneously issued, defaulting to no action: {p_charge} and {p_discharge}"
             )
             return 0
 
-        elif charge >= TOLERANCE:
-            return charge
+        elif p_charge >= TOLERANCE:
+            return p_charge
 
-        elif discharge >= TOLERANCE:
-            return -discharge
+        elif p_discharge >= TOLERANCE:
+            return -p_discharge
 
         else:
             return 0

@@ -32,23 +32,23 @@ class NaiveBaseline(Strategy):
     def action(
         self,
         forecast: numpy.ndarray,
-        soc: float,
-        capacity: float,
-        power: float,
+        c_soc: float,
+        c_max: float,
+        p_max: float,
         last_price: float,
         day: int,
     ) -> float:
         # TODO: handle max actions per day
 
-        if soc < capacity / 2:
-            if last_price < self._charge_limit and soc < capacity:
+        if c_soc < c_max / 2:
+            if last_price < self._charge_limit and c_soc < c_max:
                 # < 50% SOC and price is low, time to charge
-                return power
+                return p_max
 
         else:
-            if last_price > self._discharge_limit and soc > 0:
+            if last_price > self._discharge_limit and c_soc > 0:
                 # > 50% SOC and price is high, time to discharge
-                return -power
+                return -p_max
 
         return 0
 
@@ -66,22 +66,22 @@ class ForecastBaseline(NaiveBaseline):
     def action(
         self,
         forecast: numpy.ndarray,
-        soc: float,
-        capacity: float,
-        power: float,
+        c_soc: float,
+        c_max: float,
+        p_max: float,
         last_price: float,
         day: int,
     ) -> float:
         # TODO: handle max actions per day
 
-        if soc < capacity / 2:
-            if forecast[0] < self._charge_limit and soc < capacity:
+        if c_soc < c_max / 2:
+            if forecast[0] < self._charge_limit and c_soc < c_max:
                 # < 50% SOC and price is low, time to charge
-                return power
+                return p_max
 
         else:
-            if forecast[0] > self._discharge_limit and soc > 0:
+            if forecast[0] > self._discharge_limit and c_soc > 0:
                 # > 50% SOC and price is high, time to discharge
-                return -power
+                return -p_max
 
         return 0

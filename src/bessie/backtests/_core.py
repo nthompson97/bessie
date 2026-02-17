@@ -20,10 +20,10 @@ class BacktestInputData:
     start: pandas.Timestamp
     end: pandas.Timestamp
 
-    capacity: float = 50.0  # MWh, battery capacity
-    power: float = 50.0  # MW, charge/discharge power rating
-    degradation: float = 0.0  # degradation rate per action
-    delta_t: float = 5 / 60  # time step in hours
+    c_init: float = 50.0  # MWh, initial battery capacity
+    p_max: float = 50.0  # MW, max charge/discharge power rating
+    deg: float = 0.0  # degradation rate per action
+    dt: float = 5 / 60  # time step in hours
 
     @classmethod
     def from_aemo_forecasts(
@@ -74,7 +74,7 @@ class BacktestInputData:
 @dataclass
 class BacktestResults:
     strategy: Strategy
-    actions: numpy.ndarray  # (n_timestamps,)
-    soc: numpy.ndarray  # (n_timestamps,)
-    revenue: numpy.ndarray  # (n_timestamps,) period revenue
-    capacity: numpy.ndarray  # (n_timestamps,)
+    p_actions: numpy.ndarray  # (n_timestamps,) Power actions through time
+    c_soc: numpy.ndarray  # (n_timestamps,) State Of Chargeg through time
+    c_max: numpy.ndarray  # (n_timestamps,) BESS max capacity through time
+    revenue: numpy.ndarray  # (n_timestamps,) period revenue through time

@@ -30,43 +30,43 @@ def backtest_scorecard(
     labels = _result_labels(results)
 
     for label, result in zip(labels, results):
-        n_actions = (result.actions != 0).sum()
+        n_actions = (result.p_actions != 0).sum()
 
         columns[label] = {
             ("Revenue", "Total"): (result.revenue.sum(), "${:,.0f}"),
             ("Revenue", "Per day"): (result.revenue.sum() / n_days, "${:,.0f}"),
             ("Activity", "Charging intervals"): (
-                (result.actions > 0).sum(),
+                (result.p_actions > 0).sum(),
                 "{:,.0f}",
             ),
             ("Activity", "Charging %"): (
-                100 * (result.actions > 0).mean(),
+                100 * (result.p_actions > 0).mean(),
                 "{:.1f}%",
             ),
             ("Activity", "Idle intervals"): (
-                (result.actions == 0).sum(),
+                (result.p_actions == 0).sum(),
                 "{:,.0f}",
             ),
             ("Activity", "Idle %"): (
-                100 * (result.actions == 0).mean(),
+                100 * (result.p_actions == 0).mean(),
                 "{:.1f}%",
             ),
             ("Activity", "Discharging intervals"): (
-                (result.actions < 0).sum(),
+                (result.p_actions < 0).sum(),
                 "{:,.0f}",
             ),
             ("Activity", "Discharging %"): (
-                100 * (result.actions < 0).mean(),
+                100 * (result.p_actions < 0).mean(),
                 "{:.1f}%",
             ),
             ("Degradation", "Total actions"): (n_actions, "{:,.0f}"),
             ("Degradation", "Actions per day"): (n_actions / n_days, "{:,.1f}"),
             ("Degradation", "Final capacity (MWh)"): (
-                result.capacity[-1],
+                result.c_max[-1],
                 "{:,.2f}",
             ),
             ("Degradation", "Capacity remaining %"): (
-                100 * result.capacity[-1] / data.capacity,
+                100 * result.c_max[-1] / data.c_init,
                 "{:.2f}%",
             ),
         }
@@ -80,9 +80,9 @@ def backtest_scorecard(
     df.index = pandas.MultiIndex.from_tuples(df.index)
 
     print(f"Region:            {data.region.value}")
-    print(f"Starting capacity: {data.capacity:,.0f} MWh")
-    print(f"Power rating:      {data.power:,.0f} MW")
-    print(f"Degredation rate:  {data.degradation:,.6%}")
+    print(f"Starting capacity: {data.c_init:,.0f} MWh")
+    print(f"Power rating:      {data.p_max:,.0f} MW")
+    print(f"Degredation rate:  {data.deg:,.6%}")
     print(f"N. Days:           {n_days:,.0f}")
 
     return df
@@ -94,11 +94,11 @@ def backtest_tsplot(
 ) -> FigureWidgetResampler:
     return tsplot(
         {
-            "State": pandas.Series(results.actions, index=data.timestamps),
+            "State": pandas.Series(results.p_actions, index=data.timestamps),
             "Charge": pandas.DataFrame(
                 {
-                    "SOC": results.soc,
-                    "Max Capacity": results.capacity,
+                    "SOC": results.c_soc,
+                    "Max Capacity": results.c_max,
                 },
                 index=data.timestamps,
             ),
@@ -127,15 +127,15 @@ def backtest_comparison(
     return tsplot(
         {
             "State": pandas.DataFrame(
-                {lbl: r.actions for lbl, r in zip(labels, results)},
+                {lbl: r.p_actions for lbl, r in zip(labels, results)},
                 index=data.timestamps,
             ),
             "SOC": pandas.DataFrame(
-                {lbl: r.soc for lbl, r in zip(labels, results)},
+                {lbl: r.c_soc for lbl, r in zip(labels, results)},
                 index=data.timestamps,
             ),
             "Max Capacity": pandas.DataFrame(
-                {lbl: r.capacity for lbl, r in zip(labels, results)},
+                {lbl: r.c_max for lbl, r in zip(labels, results)},
                 index=data.timestamps,
             ),
             "Cumulative Revenue": pandas.DataFrame(

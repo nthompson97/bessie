@@ -14,9 +14,9 @@ class Strategy(abc.ABC):
     def action(
         self,
         forecast: numpy.ndarray,
-        soc: float,
-        capacity: float,
-        power: float,
+        c_soc: float,
+        c_max: float,
+        p_max: float,
         last_price: float,
         day: int,
     ) -> float:
@@ -31,9 +31,9 @@ class Strategy(abc.ABC):
 
         Args,
             forecast: The forecast for the subsequent 24-hours ($/MWh)
-            soc: The BESS's current State Of Charge (MWh)
-            capacity: The BESS's current maximun capacity (MWh) 
-            power: The maximum power accessible to in one action (MW)
+            c_soc: The BESS's current State Of Charge (MWh)
+            c_max: The BESS's current maximun capacity (MWh) 
+            p_max: The maximum power accessible to in one action (MW)
             last_price: The last 5-minute periods price ($/MWh)
             day: The unique integer corresponding to the current day
 
