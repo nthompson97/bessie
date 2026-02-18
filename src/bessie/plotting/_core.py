@@ -46,13 +46,11 @@ def tsplot(
     n_rows = len(data) if isinstance(data, dict) else 1
     subplot_titles = list(data.keys()) if isinstance(data, dict) else []
 
-    fig = (
-        make_subplots(
-            rows=n_rows,
-            cols=1,
-            shared_xaxes=True,
-            subplot_titles=subplot_titles,
-        )
+    fig = make_subplots(
+        rows=n_rows,
+        cols=1,
+        shared_xaxes=True,
+        subplot_titles=subplot_titles,
     )
 
     if resampler:

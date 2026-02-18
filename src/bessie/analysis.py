@@ -144,14 +144,19 @@ def backtest_comparison(
                 index=data.timestamps,
             ),
             "Max Capacity (%)": pandas.DataFrame(
-                {lbl: r.c_max / battery.e_max for lbl, r in zip(labels, results)},
+                {
+                    lbl: r.c_max / battery.e_max
+                    for lbl, r in zip(labels, results)
+                },
                 index=data.timestamps,
             ),
             "Cumulative Revenue ($)": pandas.DataFrame(
                 {lbl: r.revenue.cumsum() for lbl, r in zip(labels, results)},
                 index=data.timestamps,
             ),
-            "Market price ($/MWh)": pandas.Series(data.realised, index=data.timestamps),
+            "Market price ($/MWh)": pandas.Series(
+                data.realised, index=data.timestamps
+            ),
         },
         resampler=resampler,
     )
