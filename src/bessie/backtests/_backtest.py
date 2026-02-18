@@ -3,11 +3,12 @@ import numpy
 
 from bessie.strategies import Strategy
 
-from ._models import BacktestInputData, BacktestResults
+from ._models import BacktestInputData, BacktestResults, BatterySpec
 
 
 def bess_backtest(
     data: BacktestInputData,
+    battery: BatterySpec,
     strategy: Strategy,
 ) -> BacktestResults:
     """
@@ -18,6 +19,7 @@ def bess_backtest(
     Args,
         data: Input data for the backtest, usually consisting of forecasts,
             realised prices, and battery configuration.
+        battery: The specification of the battery to be used in the backtest.
         strategy: The strategy object defining based on input data what action
             to take on each timestep.
 
@@ -28,11 +30,11 @@ def bess_backtest(
     logging.info(f"Running BESS backtest for strategy {strategy.name}")
 
     c_soc = 0.0  # Current SOC (MWh)
-    c_max = float(data.c_init)  # Current max battery capacity (MWh)
-    p_max = float(data.p_max)  # Max charge/discharge power rating (MW)
-    eta_chg = float(data.eta_chg)  # Charging efficiency
-    eta_dchg = float(data.eta_dchg)  # Discharging efficiency
-    deg = float(data.deg)  # Battery degradation rate (0 for now)
+    c_max = float(battery.c_init)  # Current max battery capacity (MWh)
+    p_max = float(battery.p_max)  # Max charge/discharge power rating (MW)
+    eta_chg = float(battery.eta_chg)  # Charging efficiency
+    eta_dchg = float(battery.eta_dchg)  # Discharging efficiency
+    deg = float(battery.deg)  # Battery degradation rate (0 for now)
     dt = float(data.dt)  # Time step duration (hours)
 
     (n,) = data.realised.shape

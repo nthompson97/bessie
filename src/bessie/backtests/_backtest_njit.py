@@ -3,7 +3,7 @@ from numba import njit
 import logging
 from bessie.strategies import NJITStrategy
 
-from ._models import BacktestInputData, BacktestResults
+from ._models import BacktestInputData, BacktestResults, BatterySpec
 
 
 @njit(cache=True)
@@ -73,6 +73,7 @@ def _backtest_loop(
 
 def bess_backtest_njit(
     data: BacktestInputData,
+    battery: BatterySpec,
     strategy: NJITStrategy,
 ) -> BacktestResults:
     logging.info(f"Running BESS backtest (njit) for strategy {strategy.name}")
@@ -84,11 +85,11 @@ def bess_backtest_njit(
         forecasts=data.forecast,
         realised=data.realised,
         day=data.day,
-        c_init=float(data.c_init),
-        p_max=float(data.p_max),
-        eta_chg=float(data.eta_chg),
-        eta_dchg=float(data.eta_dchg),
-        deg=float(data.deg),
+        c_init=float(battery.c_init),
+        p_max=float(battery.p_max),
+        eta_chg=float(battery.eta_chg),
+        eta_dchg=float(battery.eta_dchg),
+        deg=float(battery.deg),
         dt=float(data.dt),
     )
 

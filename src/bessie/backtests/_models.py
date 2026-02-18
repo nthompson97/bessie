@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Any
 
 import numpy
 import pandas
@@ -7,6 +6,15 @@ import pandas
 from bessie.core import Region
 from bessie.data.silver import get_one_day_forecast, get_realised_prices
 from bessie.strategies import Strategy
+
+
+@dataclass
+class BatterySpec:
+    c_init: float = 50.0  # MWh, initial battery capacity
+    p_max: float = 50.0  # MW, max charge/discharge power rating
+    deg: float = 0.0  # degradation rate per action
+    eta_chg: float = 0.90  # charging efficiency
+    eta_dchg: float = 0.95  # discharging efficiency
 
 
 @dataclass
@@ -20,12 +28,7 @@ class BacktestInputData:
     start: pandas.Timestamp
     end: pandas.Timestamp
 
-    c_init: float = 50.0  # MWh, initial battery capacity
-    p_max: float = 50.0  # MW, max charge/discharge power rating
-    deg: float = 0.0  # degradation rate per action
     dt: float = 5 / 60  # time step in hours
-    eta_chg: float = 0.90  # charging efficiency
-    eta_dchg: float = 0.95  # discharging efficiency
 
     @classmethod
     def from_aemo_forecasts(
@@ -33,7 +36,6 @@ class BacktestInputData:
         start: pandas.Timestamp,
         end: pandas.Timestamp,
         region: Region,
-        **kwargs: Any,
     ) -> "BacktestInputData":
         """
         Produces input data using realised prices from nemosis, and forecasts
@@ -53,7 +55,6 @@ class BacktestInputData:
             region=region,
             start=start,
             end=end,
-            **kwargs,
         )
 
     @classmethod

@@ -3,7 +3,7 @@ from typing import Sequence
 import pandas
 from plotly_resampler import FigureWidgetResampler
 
-from bessie.backtests import BacktestInputData, BacktestResults
+from bessie.backtests import BacktestInputData, BacktestResults, BatterySpec
 from bessie.plotting import tsplot
 
 
@@ -19,6 +19,7 @@ def _result_labels(results: Sequence[BacktestResults]) -> list[str]:
 
 def backtest_scorecard(
     data: BacktestInputData,
+    battery: BatterySpec,
     results: BacktestResults | Sequence[BacktestResults],
 ) -> pandas.DataFrame:
     if isinstance(results, BacktestResults):
@@ -66,7 +67,7 @@ def backtest_scorecard(
                 "{:,.2f}",
             ),
             ("Degradation", "Capacity remaining %"): (
-                100 * result.c_max[-1] / data.c_init,
+                100 * result.c_max[-1] / battery.c_init,
                 "{:.2f}%",
             ),
         }
@@ -80,11 +81,11 @@ def backtest_scorecard(
     df.index = pandas.MultiIndex.from_tuples(df.index)
 
     print(f"Region:            {data.region.value}")
-    print(f"Starting capacity: {data.c_init:,.0f} MWh")
-    print(f"Power rating:      {data.p_max:,.0f} MW")
-    print(f"Degredation rate:  {data.deg:,.6%}")
-    print(f"η (charge):        {data.eta_chg:.1%}")
-    print(f"η (discharg):      {data.eta_dchg:.1%}")
+    print(f"Starting capacity: {battery.c_init:,.0f} MWh")
+    print(f"Power rating:      {battery.p_max:,.0f} MW")
+    print(f"Degredation rate:  {battery.deg:,.6%}")
+    print(f"η (charge):        {battery.eta_chg:.1%}")
+    print(f"η (discharg):      {battery.eta_dchg:.1%}")
     print(f"N. Days:           {n_days:,.0f}")
 
     return df
@@ -92,6 +93,7 @@ def backtest_scorecard(
 
 def backtest_tsplot(
     data: BacktestInputData,
+    battery: BatterySpec,
     results: BacktestResults,
 ) -> FigureWidgetResampler:
     return tsplot(
@@ -119,6 +121,7 @@ def backtest_tsplot(
 
 def backtest_comparison(
     data: BacktestInputData,
+    battery: BatterySpec,
     results: BacktestResults | Sequence[BacktestResults],
 ) -> FigureWidgetResampler:
     if isinstance(results, BacktestResults):
@@ -137,7 +140,7 @@ def backtest_comparison(
                 index=data.timestamps,
             ),
             "Max Capacity": pandas.DataFrame(
-                {lbl: r.c_max / data.c_init for lbl, r in zip(labels, results)},
+                {lbl: r.c_max / battery.c_init for lbl, r in zip(labels, results)},
                 index=data.timestamps,
             ),
             "Cumulative Revenue": pandas.DataFrame(
