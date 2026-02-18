@@ -2,7 +2,7 @@
 
 **BESSie** is a research framework for developing, backtesting, and comparing battery dispatch strategies in Australia's [National Electricity Market](https://www.aemo.com.au/energy-systems/electricity/national-electricity-market-nem) (NEM).
 
-The project provides functionality for comparing different backtest strategies across different states and time periods, with varying battery specifications. The main strategy I'm trying to develop is the "optimised" strategy that optimises over the predispatch forecast using convex optimisation. I've provided a more detailed explanation of my formulation and implementation in the series of notebooks under doc/.
+The project provides functionality for comparing different backtest strategies across different states and time periods, with varying battery specifications. The main strategy I'm trying to develop is the "optimised" strategy (see [here](./doc/optimiser.ipynb)) that optimises over the predispatch forecast using convex optimisation. I've provided a more detailed explanation of my formulation and implementation in the series of notebooks under doc/.
 
 Prices and forecasts are sourced directly from AEMO via the [nemosis](https://github.com/UNSW-CEEM/NEMOSIS) and [nemseer](https://github.com/UNSW-CEEM/nemseer) libraries:
 
