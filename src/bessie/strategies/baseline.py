@@ -39,7 +39,6 @@ class NaiveBaseline(NJITStrategy):
         eta_chg: float,
         eta_dchg: float,
         last_price: float,
-        day: int,
     ) -> float:
         # TODO: handle max actions per day
 
@@ -68,7 +67,6 @@ class NaiveBaseline(NJITStrategy):
             eta_chg: float,
             eta_dchg: float,
             last_price: float,
-            day: int,
         ) -> float:
             if c_soc < c_max / 2:
                 if last_price < charge_limit and c_soc < c_max:
@@ -97,10 +95,7 @@ class ForecastBaseline(NaiveBaseline):
         eta_chg: float,
         eta_dchg: float,
         last_price: float,
-        day: int,
     ) -> float:
-        # TODO: handle max actions per day
-
         if c_soc < c_max / 2:
             if forecast[0] < self._charge_limit and c_soc < c_max:
                 # < 50% SOC and price is low, time to charge
@@ -126,7 +121,6 @@ class ForecastBaseline(NaiveBaseline):
             eta_chg: float,
             eta_dchg: float,
             last_price: float,
-            day: int,
         ) -> float:
             if c_soc < c_max / 2:
                 if forecast[0] < charge_limit and c_soc < c_max:

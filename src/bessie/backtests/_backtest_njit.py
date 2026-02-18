@@ -11,7 +11,6 @@ def _backtest_loop(
     action_fn,
     forecasts: numpy.ndarray,
     realised: numpy.ndarray,
-    day: numpy.ndarray,
     c_init: float,
     p_max: float,
     eta_chg: float,
@@ -38,7 +37,6 @@ def _backtest_loop(
             eta_chg=eta_chg,
             eta_dchg=eta_dchg,
             last_price=realised[i - 1],
-            day=day[i],
         )
 
         if action < -1.0:
@@ -84,7 +82,6 @@ def bess_backtest_njit(
         action_fn=action_fn,
         forecasts=data.forecast,
         realised=data.realised,
-        day=data.day,
         c_init=float(battery.c_init),
         p_max=float(battery.p_max),
         eta_chg=float(battery.eta_chg),

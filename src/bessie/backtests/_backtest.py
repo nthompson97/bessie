@@ -53,7 +53,6 @@ def bess_backtest(
             eta_chg=eta_chg,
             eta_dchg=eta_dchg,
             last_price=data.realised[i - 1],
-            day=data.day[i],
         )
 
         if action < -1.0 or action > 1.0:

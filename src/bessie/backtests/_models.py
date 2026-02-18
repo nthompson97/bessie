@@ -22,7 +22,6 @@ class BacktestInputData:
     forecast: numpy.ndarray  # (n_timestamps, n_forecast_steps)
     realised: numpy.ndarray  # (n_timestamps,)
     timestamps: pandas.DatetimeIndex  # (n_timestamps,)
-    day: numpy.ndarray  # (n_timestamps,) integer day indices
 
     region: Region
     start: pandas.Timestamp
@@ -45,13 +44,11 @@ class BacktestInputData:
         realised = get_realised_prices(start, end)
 
         timestamps = pandas.DatetimeIndex(forecast["timestamp"].to_numpy())
-        day, _ = pandas.factorize(timestamps.date)
 
         return cls(
             forecast=forecast.sel(region=region.value)["RRP"].to_numpy(),
             realised=realised.sel(region=region.value)["RRP"].to_numpy(),
             timestamps=timestamps,
-            day=day,
             region=region,
             start=start,
             end=end,

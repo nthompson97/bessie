@@ -32,7 +32,6 @@ class QuantilePicker(NJITStrategy):
         eta_chg: float,
         eta_dchg: float,
         last_price: float,
-        day: int,
     ) -> float:
         # TODO: handle max actions per day
 
@@ -63,7 +62,6 @@ class QuantilePicker(NJITStrategy):
             eta_chg: float,
             eta_dchg: float,
             last_price: float,
-            day: int,
         ) -> float:
             charge_threshold = numpy.quantile(forecast, charge_quantile)
             discharge_threshold = numpy.quantile(forecast, discharge_quantile)

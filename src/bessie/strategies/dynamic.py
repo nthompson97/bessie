@@ -185,7 +185,6 @@ class DPOptimised(NJITStrategy):
         eta_chg: float,
         eta_dchg: float,
         last_price: float,
-        day: int,
     ) -> float:
         if numpy.isnan(forecast).any():
             return 0
@@ -212,7 +211,6 @@ class DPOptimised(NJITStrategy):
             eta_chg: float,
             eta_dchg: float,
             last_price: float,
-            day: int,
         ) -> float:
             return solve_battery_dp(
                 forecast_arr=forecast,

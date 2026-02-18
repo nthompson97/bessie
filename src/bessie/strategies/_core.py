@@ -20,7 +20,6 @@ class Strategy(abc.ABC):
         eta_chg: float,
         eta_dchg: float,
         last_price: float,
-        day: int,
     ) -> float:
         """
         Based on provided price and forecast data, produce an action for the
@@ -40,7 +39,6 @@ class Strategy(abc.ABC):
             eta_chg: The charging efficiency of the BESS
             eta_dchg: The discharging efficiency of the BESS
             last_price: The last 5-minute periods price ($/MWh)
-            day: The unique integer corresponding to the current day
 
         Returns,
             float: The total desired energy flows (MW)
