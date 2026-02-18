@@ -1,4 +1,3 @@
-import ipywidgets
 import pandas
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -24,10 +23,11 @@ SEABORN_DEEP = [
 
 def tsplot(
     data: Timeseries | dict[str, Timeseries],
+    resampler: bool = True,
     *,
     title: str | None = None,
     **kwargs,
-) -> FigureWidgetResampler:
+) -> FigureWidgetResampler | go.Figure:
     """
     Plot timeseries data using plotly with plotly resampler [1].
 
@@ -46,7 +46,7 @@ def tsplot(
     n_rows = len(data) if isinstance(data, dict) else 1
     subplot_titles = list(data.keys()) if isinstance(data, dict) else []
 
-    fig = FigureWidgetResampler(
+    fig = (
         make_subplots(
             rows=n_rows,
             cols=1,
@@ -54,6 +54,9 @@ def tsplot(
             subplot_titles=subplot_titles,
         )
     )
+
+    if resampler:
+        fig = FigureWidgetResampler(fig)
 
     # Track trace names for linking across subplots
     seen_traces: set[str] = set()
@@ -76,20 +79,40 @@ def tsplot(
         show_legend = _name not in seen_traces
         seen_traces.add(_name)
 
-        fig.add_trace(
-            go.Scattergl(
-                name=_name,
-                legendgroup=_name,
-                showlegend=show_legend,
-                line={"color": _get_color(_name), "width": 1},
-            ),
-            hf_x=_series.index.as_unit("ms")
+        x = (
+            _series.index.as_unit("ms")
             if isinstance(_series.index, pandas.DatetimeIndex)
-            else _series.index,
-            hf_y=_series.to_numpy().copy(),
-            row=_row,
-            col=1,
+            else _series.index
         )
+        y = _series.to_numpy().copy()
+
+        if resampler:
+            fig.add_trace(
+                go.Scattergl(
+                    name=_name,
+                    legendgroup=_name,
+                    showlegend=show_legend,
+                    line={"color": _get_color(_name), "width": 1},
+                ),
+                hf_x=x,
+                hf_y=y,
+                row=_row,
+                col=1,
+            )
+
+        else:
+            fig.add_trace(
+                go.Scatter(
+                    name=_name,
+                    x=x,
+                    y=y,
+                    legendgroup=_name,
+                    showlegend=show_legend,
+                    line={"color": _get_color(_name), "width": 1},
+                ),
+                row=_row,
+                col=1,
+            )
 
     def _plot_timeseries(
         _ts: Timeseries,

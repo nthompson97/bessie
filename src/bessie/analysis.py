@@ -86,7 +86,7 @@ def backtest_scorecard(
     print(f"Duration:          {battery.duration:,.1f} H")
     print(f"Degredation rate:  {battery.deg:,.6%}")
     print(f"η (charge):        {battery.eta_chg:.1%}")
-    print(f"η (discharg):      {battery.eta_dchg:.1%}")
+    print(f"η (discharge):     {battery.eta_dchg:.1%}")
     print(f"N. Days:           {n_days:,.0f}")
 
     return df
@@ -96,6 +96,7 @@ def backtest_tsplot(
     data: BacktestInputData,
     battery: BatterySpec,
     results: BacktestResults,
+    resampler: bool = True,
 ) -> FigureWidgetResampler:
     return tsplot(
         {
@@ -116,6 +117,7 @@ def backtest_tsplot(
             ),
             "Market price": pandas.Series(data.realised, index=data.timestamps),
         },
+        resampler=resampler,
         title=f"Total revenue: ${results.revenue.sum():,.2f}",
     )
 
@@ -124,6 +126,7 @@ def backtest_comparison(
     data: BacktestInputData,
     battery: BatterySpec,
     results: BacktestResults | Sequence[BacktestResults],
+    resampler: bool = True,
 ) -> FigureWidgetResampler:
     if isinstance(results, BacktestResults):
         results = [results]
@@ -150,4 +153,5 @@ def backtest_comparison(
             ),
             "Market price ($/MWh)": pandas.Series(data.realised, index=data.timestamps),
         },
+        resampler=resampler,
     )
