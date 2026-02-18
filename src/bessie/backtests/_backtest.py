@@ -30,7 +30,7 @@ def bess_backtest(
     logging.info(f"Running BESS backtest for strategy {strategy.name}")
 
     c_soc = 0.0  # Current SOC (MWh)
-    c_max = float(battery.c_init)  # Current max battery capacity (MWh)
+    c_max = float(battery.e_max)  # Current max battery capacity (MWh)
     p_max = float(battery.p_max)  # Max charge/discharge power rating (MW)
     eta_chg = float(battery.eta_chg)  # Charging efficiency
     eta_dchg = float(battery.eta_dchg)  # Discharging efficiency

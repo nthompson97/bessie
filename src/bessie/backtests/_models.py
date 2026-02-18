@@ -10,11 +10,36 @@ from bessie.strategies import Strategy
 
 @dataclass
 class BatterySpec:
-    c_init: float = 50.0  # MWh, initial battery capacity
-    p_max: float = 50.0  # MW, max charge/discharge power rating
-    deg: float = 0.0  # degradation rate per action
+    p_max: float = 50.0   # MW, max charge/discharge power rating
+    e_max: float = 50.0  # MWh, usable energy capacity (= p_max × duration)
+    deg: float = 0.0      # degradation rate per action
     eta_chg: float = 0.90  # charging efficiency
     eta_dchg: float = 0.95  # discharging efficiency
+
+    @property
+    def duration(self) -> float:
+        """Discharge duration at full power (hours)."""
+        return self.e_max / self.p_max
+
+    @classmethod
+    def from_power_and_duration(
+        cls,
+        p_max: float,
+        duration: float,
+        **kwargs,
+    ) -> "BatterySpec":
+        """
+        Construct from the industry-standard power + duration description.
+
+        For brevity,
+            * Power rating (MW) is denoted p_max, how much the battery can charge/discharge at once.
+            * Energy capacity (MWh) is denoted e_max, how much the battery can charge/discharge in total.
+            * Duration (hours) is how long the battery can discharge at full power
+
+        Example:
+            BatterySpec.from_power_and_duration(111, 2.7)  # Templers BESS
+        """
+        return cls(p_max=p_max, e_max=p_max * duration, **kwargs)
 
 
 @dataclass

@@ -82,7 +82,7 @@ def bess_backtest_njit(
         action_fn=action_fn,
         forecasts=data.forecast,
         realised=data.realised,
-        c_init=float(battery.c_init),
+        c_init=float(battery.e_max),
         p_max=float(battery.p_max),
         eta_chg=float(battery.eta_chg),
         eta_dchg=float(battery.eta_dchg),
