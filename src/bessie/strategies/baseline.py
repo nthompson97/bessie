@@ -22,13 +22,11 @@ class NaiveBaseline(NJITStrategy):
         self,
         charge_limit: float,
         discharge_limit: float,
-        max_daily_actions: int,
     ) -> None:
         super().__init__()
 
         self._charge_limit = charge_limit
         self._discharge_limit = discharge_limit
-        self._max_daily_actions = max_daily_actions
 
     def action(
         self,
@@ -40,8 +38,6 @@ class NaiveBaseline(NJITStrategy):
         eta_dchg: float,
         last_price: float,
     ) -> float:
-        # TODO: handle max actions per day
-
         if c_soc < c_max / 2:
             if last_price < self._charge_limit and c_soc < c_max:
                 # < 50% SOC and price is low, time to charge

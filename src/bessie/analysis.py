@@ -132,22 +132,22 @@ def backtest_comparison(
 
     return tsplot(
         {
-            "State": pandas.DataFrame(
+            "Dispatch (MW)": pandas.DataFrame(
                 {lbl: r.p_actions for lbl, r in zip(labels, results)},
                 index=data.timestamps,
             ),
-            "SOC": pandas.DataFrame(
+            "SOC (MWh)": pandas.DataFrame(
                 {lbl: r.c_soc for lbl, r in zip(labels, results)},
                 index=data.timestamps,
             ),
-            "Max Capacity": pandas.DataFrame(
+            "Max Capacity (%)": pandas.DataFrame(
                 {lbl: r.c_max / battery.e_max for lbl, r in zip(labels, results)},
                 index=data.timestamps,
             ),
-            "Cumulative Revenue": pandas.DataFrame(
+            "Cumulative Revenue ($)": pandas.DataFrame(
                 {lbl: r.revenue.cumsum() for lbl, r in zip(labels, results)},
                 index=data.timestamps,
             ),
-            "Market price": pandas.Series(data.realised, index=data.timestamps),
+            "Market price ($/MWh)": pandas.Series(data.realised, index=data.timestamps),
         },
     )
