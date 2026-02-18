@@ -1,9 +1,12 @@
+from typing import Callable
+
 import numpy
+from numba import njit
 
-from ._core import Strategy
+from ._core import NJITStrategy
 
 
-class NaiveBaseline(Strategy):
+class NaiveBaseline(NJITStrategy):
     """
     The basic strategy as described in [1].
 
@@ -52,6 +55,32 @@ class NaiveBaseline(Strategy):
 
         return 0
 
+    def action_njit(self) -> Callable[..., float]:
+        charge_limit = float(self._charge_limit)
+        discharge_limit = float(self._discharge_limit)
+
+        @njit(cache=True)
+        def _action(
+            forecast: numpy.ndarray,
+            c_soc: float,
+            c_max: float,
+            p_max: float,
+            eta_chg: float,
+            eta_dchg: float,
+            last_price: float,
+            day: int,
+        ) -> float:
+            if c_soc < c_max / 2:
+                if last_price < charge_limit and c_soc < c_max:
+                    return 1.0
+            else:
+                if last_price > discharge_limit and c_soc > 0:
+                    return -1.0
+            return 0.0
+
+        return _action
+
+
 class ForecastBaseline(NaiveBaseline):
     """
     Almost the same as the NaiveBaseline strategy. The only difference being
@@ -83,3 +112,28 @@ class ForecastBaseline(NaiveBaseline):
                 return -1.0
 
         return 0
+
+    def action_njit(self) -> Callable[..., float]:
+        charge_limit = float(self._charge_limit)
+        discharge_limit = float(self._discharge_limit)
+
+        @njit(cache=True)
+        def _action(
+            forecast: numpy.ndarray,
+            c_soc: float,
+            c_max: float,
+            p_max: float,
+            eta_chg: float,
+            eta_dchg: float,
+            last_price: float,
+            day: int,
+        ) -> float:
+            if c_soc < c_max / 2:
+                if forecast[0] < charge_limit and c_soc < c_max:
+                    return 1.0
+            else:
+                if forecast[0] > discharge_limit and c_soc > 0:
+                    return -1.0
+            return 0.0
+
+        return _action
