@@ -7,30 +7,18 @@ from bessie.backtests import BacktestInputData, BacktestResults, BatterySpec
 from bessie.plotting import tsplot
 
 
-def _result_labels(results: Sequence[BacktestResults]) -> list[str]:
-    counts: dict[str, int] = {}
-    labels: list[str] = []
-    for result in results:
-        name = result.strategy.name
-        counts[name] = counts.get(name, 0) + 1
-        labels.append(name if counts[name] == 1 else f"{name} ({counts[name]})")
-    return labels
-
-
 def backtest_scorecard(
     data: BacktestInputData,
     battery: BatterySpec,
-    results: BacktestResults | Sequence[BacktestResults],
+    results: BacktestResults | dict[str, BacktestResults],
 ) -> pandas.DataFrame:
     if isinstance(results, BacktestResults):
-        results = [results]
+        results = {results.strategy.name: results}
 
     n_days = (data.end - data.start).days
     columns = {}
 
-    labels = _result_labels(results)
-
-    for label, result in zip(labels, results):
+    for label, result in results.items():
         n_actions = (result.p_actions != 0).sum()
 
         columns[label] = {
@@ -125,33 +113,36 @@ def backtest_tsplot(
 def backtest_comparison(
     data: BacktestInputData,
     battery: BatterySpec,
-    results: BacktestResults | Sequence[BacktestResults],
+    results: BacktestResults | dict[BacktestResults],
     resampler: bool = True,
 ) -> FigureWidgetResampler:
     if isinstance(results, BacktestResults):
-        results = [results]
+        results = {results.strategy.name: results}
 
-    labels = _result_labels(results)
+    labels = list(results.keys())
 
     return tsplot(
         {
             "Dispatch (MW)": pandas.DataFrame(
-                {lbl: r.p_actions for lbl, r in zip(labels, results)},
+                {lbl: r.p_actions for lbl, r in zip(labels, results.values())},
                 index=data.timestamps,
             ),
             "SOC (MWh)": pandas.DataFrame(
-                {lbl: r.c_soc for lbl, r in zip(labels, results)},
+                {lbl: r.c_soc for lbl, r in zip(labels, results.values())},
                 index=data.timestamps,
             ),
             "Max Capacity (%)": pandas.DataFrame(
                 {
                     lbl: r.c_max / battery.e_max
-                    for lbl, r in zip(labels, results)
+                    for lbl, r in zip(labels, results.values())
                 },
                 index=data.timestamps,
             ),
             "Cumulative Revenue ($)": pandas.DataFrame(
-                {lbl: r.revenue.cumsum() for lbl, r in zip(labels, results)},
+                {
+                    lbl: r.revenue.cumsum()
+                    for lbl, r in zip(labels, results.values())
+                },
                 index=data.timestamps,
             ),
             "Market price ($/MWh)": pandas.Series(

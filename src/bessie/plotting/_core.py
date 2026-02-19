@@ -115,9 +115,10 @@ def tsplot(
     def _plot_timeseries(
         _ts: Timeseries,
         _row: int = 1,
+        _name: str | None = None,
     ) -> None:
         if isinstance(_ts, pandas.Series):
-            _add_trace(_ts, _ts.name, _row)
+            _add_trace(_ts, _name or _ts.name, _row)
 
         elif isinstance(_ts, pandas.DataFrame):
             for col in _ts:
@@ -128,7 +129,7 @@ def tsplot(
 
     if isinstance(data, dict):
         for i, k in enumerate(data):
-            _plot_timeseries(data[k], _row=i + 1)
+            _plot_timeseries(data[k], _row=i + 1, _name=k)
 
     else:
         _plot_timeseries(data)

@@ -8,7 +8,7 @@ from ._core import NJITStrategy
 PLACEHOLDER = -numpy.inf
 
 
-@njit(cache=True)
+@njit
 def _foo(
     t: int,
     i: int,

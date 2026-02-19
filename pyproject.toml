@@ -12,6 +12,7 @@ dependencies = [
     "ipykernel>=6.29.5",
     "ipython>=9.9.0",
     "ipywidgets>=8.1.8",
+    "kaleido>=1.2.0",
     "nbformat>=5.10.4",
     "nemosis>=3.8.1",
     "nemseer>=1.0.7",
