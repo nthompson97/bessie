@@ -81,7 +81,7 @@ def _foo(
     return _best
 
 
-@njit(cache=True)
+@njit
 def solve_battery_dp(
     forecast_arr: numpy.ndarray,
     c_init: float,
