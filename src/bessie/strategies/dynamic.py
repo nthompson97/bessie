@@ -184,13 +184,13 @@ class DPOptimised(NJITStrategy):
         p_max: float,
         eta_chg: float,
         eta_dchg: float,
-        last_price: float,
+        last_price: numpy.ndarray,
     ) -> numpy.ndarray:
         if numpy.isnan(forecast).any():
             return numpy.zeros(7)
 
         return solve_battery_dp(
-            forecast_arr=forecast,
+            forecast_arr=forecast[0, :],
             c_init=c_soc,
             c_max_val=c_max,
             p_max_val=p_max,
@@ -210,10 +210,10 @@ class DPOptimised(NJITStrategy):
             p_max: float,
             eta_chg: float,
             eta_dchg: float,
-            last_price: float,
+            last_price: numpy.ndarray,
         ) -> numpy.ndarray:
             return solve_battery_dp(
-                forecast_arr=forecast,
+                forecast_arr=forecast[0, :],
                 c_init=c_soc,
                 c_max_val=c_max,
                 p_max_val=p_max,

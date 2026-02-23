@@ -113,11 +113,11 @@ class BacktestInputData:
 @dataclass
 class BacktestResults:
     strategy: Strategy
-    p_actions: (
+    actions: (
         numpy.ndarray
-    )  # (n_timestamps, 8) Actions through time, across each market
-    c_soc: numpy.ndarray  # (n_timestamps,) State Of Chargeg through time
+    )  # (n_timestamps, 7) Actions through time, across each market
+    c_soc: numpy.ndarray  # (n_timestamps,) State Of Charge through time
     c_max: numpy.ndarray  # (n_timestamps,) BESS max capacity through time
     revenue: (
         numpy.ndarray
-    )  # (n_timestamps, 8) period revenue through time, across each market
+    )  # (n_timestamps, 7) period revenue through time, across each market

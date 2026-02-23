@@ -20,7 +20,7 @@ class Strategy(abc.ABC):
         p_max: float,
         eta_chg: float,
         eta_dchg: float,
-        last_price: float,
+        last_price: numpy.ndarray,
     ) -> numpy.ndarray:
         """
         Based on provided price and forecast data, produce an action for the
@@ -33,13 +33,13 @@ class Strategy(abc.ABC):
             * > 0 corresponds to charging
 
         Args,
-            forecast: The forecast for the subsequent 24-hours ($/MWh)
+            forecast: The forecast for the subsequent 24-hours across each market ($/MWh)
             c_soc: The BESS's current State Of Charge (MWh)
             c_max: The BESS's current maximun capacity (MWh)
             p_max: The maximum power accessible to in one action (MW)
             eta_chg: The charging efficiency of the BESS
             eta_dchg: The discharging efficiency of the BESS
-            last_price: The last 5-minute periods price ($/MWh)
+            last_price: The last 5-minute periods RRP price across each market ($/MWh)
 
         Returns,
             numpy.ndarray: ac action for the upcoming period, should be a

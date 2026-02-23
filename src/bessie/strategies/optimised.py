@@ -87,7 +87,7 @@ class ClarabelOptimised(Strategy):
         p_max: float,
         eta_chg: float,
         eta_dchg: float,
-        last_price: float,
+        last_price: numpy.ndarray,
     ) -> numpy.ndarray:
         if numpy.isnan(forecast).any():
             return numpy.zeros(7)
@@ -100,7 +100,7 @@ class ClarabelOptimised(Strategy):
                     f"Charging and discharging efficiencies must differ for optimiser, got {eta_chg} and {eta_dchg}"
                 )
 
-        self._problem.param_dict["forecast"].value = forecast[: self._horizon]
+        self._problem.param_dict["forecast"].value = forecast[0, : self._horizon]
         self._problem.param_dict["c_initial"].value = c_soc
         self._problem.param_dict["p_max"].value = p_max
         self._problem.param_dict["c_max"].value = c_max
