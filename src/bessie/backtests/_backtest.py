@@ -39,10 +39,10 @@ def bess_backtest(
 
     (n,) = data.realised.shape
 
-    output_p_actions = numpy.empty(n)
+    output_p_actions = numpy.empty(n, 7)
     output_c_soc = numpy.empty(n)
     output_c_max = numpy.empty(n)
-    output_revenue = numpy.empty(n)
+    output_revenue = numpy.empty(n, 7)
 
     for i in range(n):
         action = strategy.action(
@@ -55,29 +55,29 @@ def bess_backtest(
             last_price=data.realised[i - 1],
         )
 
-        if action < -1.0 or action > 1.0:
+        if action[0] < -1.0 or action[0] > 1.0:
             logging.warning(
-                f"Strategy {strategy.name} produced action {action} at index {i}, which is outside the expected range [-1.0, 1.0]. Clipping to range."
+                f"Strategy {strategy.name} produced action {action[0]} at index {i}, which is outside the expected range [-1.0, 1.0]. Clipping to range."
             )
-            action = max(min(action, 1.0), -1.0)
+            action[0] = numpy.clip(action[0], -1.0, 1.0)
 
         logging.debug(i, c_soc, c_max, p_max, data.realised[i - 1], action)
 
-        if action > 0:
+        if action[0] > 0:
             # Charging
             c_max *= 1 - deg
-            p_action = min(action * p_max * dt, c_max - c_soc)
+            p_action = min(action[0] * p_max * dt, c_max - c_soc)
             p_actual = p_action * eta_chg
 
-        elif action == 0:
+        elif action[0] == 0:
             # Idling
             p_action = 0
             p_actual = 0
 
-        elif action < 0:
+        elif action[0] < 0:
             # Discharging
             c_max *= 1 - deg
-            p_action = -min(-action * p_max * dt, c_soc)
+            p_action = -min(-action[0] * p_max * dt, c_soc)
             p_actual = p_action * eta_dchg
 
         else:

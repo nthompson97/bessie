@@ -1,6 +1,7 @@
-import numpy
 import abc
 from typing import Callable
+
+import numpy
 
 
 class Strategy(abc.ABC):
@@ -20,7 +21,7 @@ class Strategy(abc.ABC):
         eta_chg: float,
         eta_dchg: float,
         last_price: float,
-    ) -> float:
+    ) -> numpy.ndarray:
         """
         Based on provided price and forecast data, produce an action for the
         strategy. Action should correspond to the total energy change being
@@ -41,7 +42,21 @@ class Strategy(abc.ABC):
             last_price: The last 5-minute periods price ($/MWh)
 
         Returns,
-            float: The total desired energy flows (MW)
+            numpy.ndarray: ac action for the upcoming period, should be a
+                7-element array where each element corresponds to,
+
+                    * x[0]: Amount to charge/discharge (positive for charge, negative for discharge)
+                    * x[1]: Amount to assign to raise 6-sec FCAS
+                    * x[2]: Amount to assign to raise 60-sec FCAS
+                    * x[3]: Amount to assign to raise 5-min FCAS
+                    * x[4]: Amount to assign to lower 6-sec FCAS
+                    * x[5]: Amount to assign to lower 60-sec FCAS
+                    * x[6]: Amount to assign to lower 5-min FCAS
+
+                Subject to,
+                    * -1 <= x[0] <= 1
+                    * x[i] >= 0 for all i >= 1
+
         """
         ...
 

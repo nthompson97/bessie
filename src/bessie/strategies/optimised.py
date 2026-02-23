@@ -88,9 +88,9 @@ class ClarabelOptimised(Strategy):
         eta_chg: float,
         eta_dchg: float,
         last_price: float,
-    ) -> float:
+    ) -> numpy.ndarray:
         if numpy.isnan(forecast).any():
-            return 0
+            return numpy.zeros(7)
 
         if self._problem is None:
             self._init_problem()
@@ -112,20 +112,21 @@ class ClarabelOptimised(Strategy):
         p_charge = self._problem.var_dict["p_charge"].value[0]
         p_discharge = self._problem.var_dict["p_discharge"].value[0]
 
+        x = numpy.zeros(7)
+
         if p_charge >= TOLERANCE and p_discharge >= TOLERANCE:
             warnings.warn(
                 f"Actions to both charge and discharge simultaneously issued, defaulting to no action: {p_charge} and {p_discharge}"
             )
-            return 0
+            return x
 
         elif p_charge >= TOLERANCE:
-            return p_charge / p_max
+            x[0] = p_charge / p_max
 
         elif p_discharge >= TOLERANCE:
-            return -p_discharge / p_max
+            x[0] = -p_discharge / p_max
 
-        else:
-            return 0
+        return x
 
     def action_njit(self) -> Callable[..., float]:
         raise NotImplementedError

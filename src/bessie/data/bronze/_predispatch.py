@@ -10,14 +10,12 @@ from .._decorators import xarray_cache
 # TODO: Uncomment the remaining FCAS markets when we address memory a bit better
 DATA_VARS = [
     "RRP",
-    # "RAISE6SECRRP",
-    # "RAISE60SECRRP",
-    # "RAISE5MINRRP",
-    # "RAISEREGRRP",
-    # "LOWER6SECRRP",
-    # "LOWER60SECRRP",
-    # "LOWER5MINRRP",
-    # "LOWERREGRRP",
+    "RAISE6SECRRP",
+    "RAISE60SECRRP",
+    "RAISE5MINRRP",
+    "LOWER6SECRRP",
+    "LOWER60SECRRP",
+    "LOWER5MINRRP",
 ]
 
 

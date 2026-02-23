@@ -32,22 +32,23 @@ class QuantilePicker(NJITStrategy):
         eta_chg: float,
         eta_dchg: float,
         last_price: float,
-    ) -> float:
+    ) -> numpy.ndarray:
         # TODO: handle max actions per day
 
         charge_threshold = numpy.quantile(forecast, self._charge_quantile)
         discharge_threshold = numpy.quantile(forecast, self._discharge_quantile)
 
+        x = numpy.zeros(7)
+
         if forecast[0] < charge_threshold and c_soc < c_max:
             # price is low, time to charge
-            return +1.0
+            x[0] = 1.0
 
         elif forecast[0] > discharge_threshold and c_soc > 0:
             # price is high, time to discharge
-            return -1.0
+            x[0] = -1.0
 
-        else:
-            return 0.0
+        return x
 
     def action_njit(self) -> Callable[..., float]:
         charge_quantile = float(self._charge_quantile)
@@ -62,17 +63,18 @@ class QuantilePicker(NJITStrategy):
             eta_chg: float,
             eta_dchg: float,
             last_price: float,
-        ) -> float:
+        ) -> numpy.ndarray:
             charge_threshold = numpy.quantile(forecast, charge_quantile)
             discharge_threshold = numpy.quantile(forecast, discharge_quantile)
 
+            x = numpy.zeros(7)
+
             if forecast[0] < charge_threshold and c_soc < c_max:
-                return 1.0
+                x[0] = 1.0
 
             elif forecast[0] > discharge_threshold and c_soc > 0:
-                return -1.0
+                x[0] = -1.0
 
-            else:
-                return 0.0
+            return x
 
         return _action

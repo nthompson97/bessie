@@ -5,6 +5,12 @@ from bessie.data import get_nemosis_data
 
 DATA_VARS = [
     "RRP",
+    "RAISE6SECRRP",
+    "RAISE60SECRRP",
+    "RAISE5MINRRP",
+    "LOWER6SECRRP",
+    "LOWER60SECRRP",
+    "LOWER5MINRRP",
 ]
 
 
@@ -19,7 +25,7 @@ def get_realised_prices(
     of an interval. So for a price recorded against a settlement interval of
     00:05:00, this represents the price from 00:00:00 to 00:05:00, NOT from
     00:05:00 to 00:10:00. I have decided to change this convention for my own
-    understanding. I have renamed SETTLEMENT_DATE to timestamp to represent 
+    understanding. I have renamed SETTLEMENT_DATE to timestamp to represent
     this.
     """
     return (

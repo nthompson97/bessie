@@ -37,18 +37,20 @@ class NaiveBaseline(NJITStrategy):
         eta_chg: float,
         eta_dchg: float,
         last_price: float,
-    ) -> float:
+    ) -> numpy.ndarray:
+        x = numpy.zeros(7)
+
         if c_soc < c_max / 2:
             if last_price < self._charge_limit and c_soc < c_max:
                 # < 50% SOC and price is low, time to charge
-                return +1.0
+                x[0] = +1.0
 
         else:
             if last_price > self._discharge_limit and c_soc > 0:
                 # > 50% SOC and price is high, time to discharge
-                return -1.0
+                x[0] = -1.0
 
-        return 0
+        return x
 
     def action_njit(self) -> Callable[..., float]:
         charge_limit = float(self._charge_limit)
@@ -63,14 +65,18 @@ class NaiveBaseline(NJITStrategy):
             eta_chg: float,
             eta_dchg: float,
             last_price: float,
-        ) -> float:
+        ) -> numpy.ndarray:
+            x = numpy.zeros(7)
+
             if c_soc < c_max / 2:
                 if last_price < charge_limit and c_soc < c_max:
-                    return 1.0
+                    x[0] = +1.0
+
             else:
                 if last_price > discharge_limit and c_soc > 0:
-                    return -1.0
-            return 0.0
+                    x[0] = -1.0
+
+            return x
 
         return _action
 
@@ -91,18 +97,20 @@ class ForecastBaseline(NaiveBaseline):
         eta_chg: float,
         eta_dchg: float,
         last_price: float,
-    ) -> float:
+    ) -> numpy.ndarray:
+        x = numpy.zeros(7)
+
         if c_soc < c_max / 2:
             if forecast[0] < self._charge_limit and c_soc < c_max:
                 # < 50% SOC and price is low, time to charge
-                return +1.0
+                x[0] = +1.0
 
         else:
             if forecast[0] > self._discharge_limit and c_soc > 0:
                 # > 50% SOC and price is high, time to discharge
-                return -1.0
+                x[0] = -1.0
 
-        return 0
+        return x
 
     def action_njit(self) -> Callable[..., float]:
         charge_limit = float(self._charge_limit)
@@ -117,13 +125,17 @@ class ForecastBaseline(NaiveBaseline):
             eta_chg: float,
             eta_dchg: float,
             last_price: float,
-        ) -> float:
+        ) -> numpy.ndarray:
+            x = numpy.zeros(7)
+
             if c_soc < c_max / 2:
                 if forecast[0] < charge_limit and c_soc < c_max:
-                    return 1.0
+                    x[0] = +1.0
+
             else:
                 if forecast[0] > discharge_limit and c_soc > 0:
-                    return -1.0
-            return 0.0
+                    x[0] = -1.0
+
+            return x
 
         return _action
