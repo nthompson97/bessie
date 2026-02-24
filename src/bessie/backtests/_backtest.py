@@ -9,8 +9,10 @@ from ._models import BacktestInputData, BacktestResults, BatterySpec
 #   [RAISE6SEC, RAISE60SEC, RAISE5MIN, LOWER6SEC, LOWER60SEC, LOWER5MIN]
 
 # Maximum response durations (hours) — BESS assumed to operate for full duration if called
-FCAS_DURATIONS = numpy.array(
+DURATIONS = numpy.array(
     [
+        5 / 60,  # Charge
+        5 / 60,  # Discharge
         6 / 3600,  # RAISE6SEC
         60 / 3600,  # RAISE60SEC
         5 / 60,  # RAISE5MIN
@@ -21,8 +23,10 @@ FCAS_DURATIONS = numpy.array(
 )
 
 # Probability of each FCAS market being called in a given dispatch interval
-FCAS_PROBS = numpy.array(
+EVENT_PROBS = numpy.array(
     [
+        1.0,  # Charge
+        1.0,  # Discharge
         0.05,  # RAISE6SEC
         0.05,  # RAISE60SEC
         0.05,  # RAISE5MIN
@@ -54,12 +58,12 @@ def bess_backtest(
         A BacktestResults object containing  data for each timestep in the
             backtest period.
 
-    TODO: Implement a mechanism for implying when frequency response was 
+    TODO: Implement a mechanism for implying when frequency response was
             required. I am hoping this is something we can source from
             historical data, i.e. a timeseries of counts for the number
             of times each FCAS market was called in each dispatch interval.
     NOTE: For now, it will be assume FCAS services are called randomly
-            according to the probabilities defined in FCAS_PROBS.
+            according to the probabilities defined in EVENT_PROBS.
     """
     logging.info(f"Running BESS backtest for strategy {strategy.name}")
 
@@ -105,61 +109,66 @@ def bess_backtest(
 
         logging.debug(i, c_soc, c_max, p_max, data.realised[i - 1], action)
 
-        # --- Energy market (action[0]=charge, action[1]=discharge) — bespoke handling ---
-        # Both values must be non-negative fractions of p_max.
-        a_charge = float(numpy.clip(action[0], 0.0, 1.0))
-        a_discharge = float(numpy.clip(action[1], 0.0, 1.0))
+        if c_soc / c_max < 0.1 or c_soc / c_max > 0.9:
+            # TODO: Ideally we wouldn't do this. For now it simplifies the
+            # backtest implementation.
+            logging.warning(
+                f"Index {i}: SOC at {c_soc:.2f} MWh ({c_soc / c_max:.1%} of "
+                f"capacity). Disable FCAS markets to avoid infeasible dispatches."
+            )
+            action[2:8] = 0.0
 
-        if a_charge > 0 or a_discharge > 0:
+        # The indicator array indicates whether energy is flowing into (+1) or
+        # out of (-1) the battery for each action type.
+        indicator = numpy.array(
+            [+1.0, -1.0, -1.0, -1.0, -1.0, +1.0, +1.0, +1.0]
+        )
+
+        # Efficiencies indicate the round-trip efficiency for each action type.
+        efficiencies = numpy.array(
+            [
+                eta_chg,
+                eta_dchg,
+                eta_dchg,
+                eta_dchg,
+                eta_dchg,
+                eta_chg,
+                eta_chg,
+                eta_chg,
+            ]
+        )
+
+        # Randomly determine which FCAS markets are called
+        # TODO: In theory FCAS could be called more than once, fix this
+        events = numpy.random.rand(8) <= EVENT_PROBS
+
+        # shape (8,), MW actually absorbed/delivered
+        p_actual = (
+            action * p_max * indicator * efficiencies * events * DURATIONS
+        )
+
+        if c_soc + p_actual.sum() > c_max or c_soc + p_actual.sum() < 0:
+            logging.warning(
+                f"Strategy {strategy.name} produced action {action} at index "
+                f"{i} that would result in infeasible SOC. Skipping."
+            )
+
+            output_actions[i, :] = 0.0
+            output_c_soc[i] = c_soc
+            output_c_max[i] = c_max
+            output_revenue[i, :] = 0.0
+
+        else:
+            c_soc += p_actual.sum()
             c_max *= 1 - deg
 
-        p_charge = min(a_charge * p_max * dt, c_max - c_soc)
-        p_discharge = min(a_discharge * p_max * dt, c_soc)
-        p_actual = p_charge * eta_chg - p_discharge * eta_dchg
+            output_actions[i, :] = action
+            output_c_soc[i] = c_soc
+            output_c_max[i] = c_max
 
-        c_soc += p_actual
-
-        # --- FCAS markets (action[2:8]) — vectorised ---
-        # Actions are fractions [0, 1] of p_max offered as availability into each market.
-        # Raise (indices 2-4): BESS discharges when called — needs SoC headroom downward.
-        # Lower (indices 5-7): BESS charges when called — needs SoC headroom upward.
-        fcas_mw = (
-            numpy.clip(action[2:8], 0.0, 1.0) * p_max
-        )  # shape (6,), MW offered
-
-        # MWh that would be consumed/absorbed if the market is called at full power
-        energy_required = fcas_mw * FCAS_DURATIONS  # shape (6,)
-
-        # Zero out raise markets where SoC is insufficient to respond
-        raise_feasible = energy_required[:3] <= c_soc
-        fcas_mw[:3] *= raise_feasible
-
-        # Zero out lower markets where headroom is insufficient to respond
-        lower_feasible = energy_required[3:] <= (c_max - c_soc)
-        fcas_mw[3:] *= lower_feasible
-
-        # FCAS availability revenue: paid per MW enabled per hour, regardless of dispatch
-        fcas_revenue = fcas_mw * data.realised[i, 1:7] * dt  # shape (6,)
-
-        # Expected SoC change from probabilistic FCAS dispatch
-        # Raise dispatches discharge (SoC down), lower dispatches charge (SoC up)
-        expected_soc_delta = numpy.empty(6)
-        expected_soc_delta[:3] = (
-            -FCAS_PROBS[:3] * fcas_mw[:3] * FCAS_DURATIONS[:3]
-        )
-        expected_soc_delta[3:] = (
-            FCAS_PROBS[3:] * fcas_mw[3:] * FCAS_DURATIONS[3:]
-        )
-        c_soc = numpy.clip(c_soc + expected_soc_delta.sum(), 0.0, c_max)
-
-        output_actions[i, 0] = p_charge
-        output_actions[i, 1] = p_discharge
-        output_actions[i, 2:8] = fcas_mw
-        output_c_soc[i] = c_soc
-        output_c_max[i] = c_max
-        output_revenue[i, 0] = -p_charge * data.realised[i, 0]
-        output_revenue[i, 1] = p_discharge * data.realised[i, 0]
-        output_revenue[i, 2:8] = fcas_revenue
+            output_revenue[i, 0] = -p_actual[0] * data.realised[i, 0]  # Charge revenue
+            output_revenue[i, 1] = -p_actual[1] * data.realised[i, 0]  # Discharge revenue
+            output_revenue[i, 2:] = action[2:] * p_max * dt * data.realised[i, 1:]  # FCAS revenue
 
     return BacktestResults(
         strategy=strategy,
