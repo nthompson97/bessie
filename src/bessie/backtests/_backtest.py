@@ -100,12 +100,25 @@ def bess_backtest(
             )
             action = numpy.clip(action, 0.0, 1.0)
 
-        if action.sum() > 1.0:
+        # Discharge-side: discharge energy + raise FCAS share one power pool
+        discharge_side = action[1] + action[2:5].sum()
+        if discharge_side > 1.0:
             logging.warning(
                 f"Strategy {strategy.name} produced action {action} at index "
-                f"{i} with sum {action.sum()} > 1. Clipping to sum of 1."
+                f"{i} with discharge-side sum {discharge_side:.3f} > 1. Normalising."
             )
-            action = action / action.sum()
+            action[1] /= discharge_side
+            action[2:5] /= discharge_side
+
+        # Charge-side: charge energy + lower FCAS share one power pool
+        charge_side = action[0] + action[5:8].sum()
+        if charge_side > 1.0:
+            logging.warning(
+                f"Strategy {strategy.name} produced action {action} at index "
+                f"{i} with charge-side sum {charge_side:.3f} > 1. Normalising."
+            )
+            action[0] /= charge_side
+            action[5:8] /= charge_side
 
         logging.debug(i, c_soc, c_max, p_max, data.realised[i - 1], action)
 
@@ -160,7 +173,12 @@ def bess_backtest(
 
         else:
             c_soc += p_actual.sum()
-            c_max *= 1 - deg
+
+            # Degradation proportional to energy throughput: a full-power
+            # 5-min dispatch gives deg * 1.0; 50% charge gives deg * 0.5;
+            # a 6-sec FCAS call at 100% gives deg * (6/3600) / dt ≈ deg * 0.02.
+            throughput = (action * events * DURATIONS).sum() / dt
+            c_max *= 1 - deg * throughput
 
             output_actions[i, :] = action
             output_c_soc[i] = c_soc

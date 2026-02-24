@@ -57,11 +57,10 @@ class Strategy(abc.ABC):
 
                 Subject to,
                     * 0 <= x[i] <= 1 for all i
-                    * -1 <= sum(x) <= 1
+                    * x[1] + x[2] + x[3] + x[4] <= 1  (discharge-side power)
+                    * x[0] + x[5] + x[6] + x[7] <= 1  (charge-side power)
                     * x[0] == 0 if x[1] > 0
                     * x[1] == 0 if x[0] > 0
-
-                TODO: Add conditions so we cannot exceed power rating
 
         """
         ...

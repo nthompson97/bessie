@@ -21,6 +21,14 @@ def backtest_scorecard(
         n_actions_fcas = (result.actions[:, 2:] != 0).sum()
 
         columns[label] = {
+            ("Revenue", "Total"): (
+                result.revenue.sum(),
+                "${:,.0f}",
+            ),
+            ("Revenue", "Per day"): (
+                result.revenue.sum() / n_days,
+                "${:,.0f}",
+            ),
             ("Revenue", "Energy Total"): (
                 result.revenue[:, :2].sum().sum(),
                 "${:,.0f}",
@@ -38,27 +46,27 @@ def backtest_scorecard(
                 "${:,.0f}",
             ),
             ("Activity", "Charging intervals"): (
-                (result.actions[:, 0] > 0.).sum(),
+                (result.actions[:, 0] > 0.0).sum(),
                 "{:,.0f}",
             ),
             ("Activity", "Charging %"): (
-                100 * (result.actions[:, 0] > 0.).mean(),
+                100 * (result.actions[:, 0] > 0.0).mean(),
                 "{:.1f}%",
             ),
             ("Activity", "Idle intervals"): (
-                (result.actions[:, :2].sum(axis=1) == 0.).sum(),
+                (result.actions[:, :2].sum(axis=1) == 0.0).sum(),
                 "{:,.0f}",
             ),
             ("Activity", "Idle %"): (
-                100 * (result.actions[:, :2].sum(axis=1) == 0.).mean(),
+                100 * (result.actions[:, :2].sum(axis=1) == 0.0).mean(),
                 "{:.1f}%",
             ),
             ("Activity", "Discharging intervals"): (
-                (result.actions[:, 0] < 0.).sum(),
+                (result.actions[:, 1] > 0.0).sum(),
                 "{:,.0f}",
             ),
             ("Activity", "Discharging %"): (
-                100 * (result.actions[:, 0] < 0.).mean(),
+                100 * (result.actions[:, 1] > 0.0).mean(),
                 "{:.1f}%",
             ),
             ("Degradation", "Energy Total Actions"): (n_actions, "{:,.0f}"),
@@ -178,6 +186,13 @@ def backtest_comparison(
                 },
                 index=data.timestamps,
             ),
+            "Cumulative Revenue ($)": pandas.DataFrame(
+                {
+                    lbl: r.revenue.sum(axis=1).cumsum()
+                    for lbl, r in zip(labels, results.values())
+                },
+                index=data.timestamps,
+            ),
             "Cumulative Revenue Energy ($)": pandas.DataFrame(
                 {
                     lbl: r.revenue[:, :2].sum(axis=1).cumsum()
@@ -190,10 +205,6 @@ def backtest_comparison(
                     lbl: r.revenue[:, 2:].sum(axis=1).cumsum()
                     for lbl, r in zip(labels, results.values())
                 },
-                index=data.timestamps,
-            ),
-            "Market price ($/MWh)": pandas.Series(
-                data.realised[:, 0],
                 index=data.timestamps,
             ),
         },
