@@ -122,14 +122,13 @@ def bess_backtest(
 
         logging.debug(i, c_soc, c_max, p_max, data.realised[i - 1], action)
 
-        if c_soc / c_max < 0.1 or c_soc / c_max > 0.9:
-            # TODO: Ideally we wouldn't do this. For now it simplifies the
-            # backtest implementation.
-            logging.warning(
-                f"Index {i}: SOC at {c_soc:.2f} MWh ({c_soc / c_max:.1%} of "
-                f"capacity). Disable FCAS markets to avoid infeasible dispatches."
-            )
-            action[2:8] = 0.0
+        # Zero out raise markets where SoC is insufficient to sustain full response
+        raise_energy = action[2:5] * p_max * DURATIONS[2:5]
+        action[2:5][raise_energy > c_soc] = 0.0
+
+        # Zero out lower markets where headroom is insufficient to sustain full response
+        lower_energy = action[5:8] * p_max * DURATIONS[5:8]
+        action[5:8][lower_energy > (c_max - c_soc)] = 0.0
 
         # The indicator array indicates whether energy is flowing into (+1) or
         # out of (-1) the battery for each action type.
