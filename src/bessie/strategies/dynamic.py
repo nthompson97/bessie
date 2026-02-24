@@ -117,7 +117,7 @@ def solve_battery_dp(
         p_max_val=p_max_val,
         cache=cache,
     )
-    _action = numpy.zeros(7)
+    _action = numpy.zeros(8)
 
     j = i_init + di_chg
     if j < n_soc:
@@ -148,7 +148,8 @@ def solve_battery_dp(
             cache=cache,
         )
         if _val < _best:
-            _action[0] = -1.0
+            _action[0] = 0.0
+            _action[1] = 1.0
 
     return _action
 
@@ -187,7 +188,7 @@ class DPOptimised(NJITStrategy):
         last_price: numpy.ndarray,
     ) -> numpy.ndarray:
         if numpy.isnan(forecast).any():
-            return numpy.zeros(7)
+            return numpy.zeros(8)
 
         return solve_battery_dp(
             forecast_arr=forecast[0, :],

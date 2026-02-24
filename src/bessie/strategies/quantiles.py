@@ -38,7 +38,7 @@ class QuantilePicker(NJITStrategy):
         charge_threshold = numpy.quantile(forecast[0, :], self._charge_quantile)
         discharge_threshold = numpy.quantile(forecast[0, :], self._discharge_quantile)
 
-        x = numpy.zeros(7)
+        x = numpy.zeros(8)
 
         if forecast[0, 0] < charge_threshold and c_soc < c_max:
             # price is low, time to charge
@@ -46,7 +46,7 @@ class QuantilePicker(NJITStrategy):
 
         elif forecast[0, 0] > discharge_threshold and c_soc > 0:
             # price is high, time to discharge
-            x[0] = -1.0
+            x[1] = 1.0
 
         return x
 
@@ -67,13 +67,13 @@ class QuantilePicker(NJITStrategy):
             charge_threshold = numpy.quantile(forecast[0, :], charge_quantile)
             discharge_threshold = numpy.quantile(forecast[0, :], discharge_quantile)
 
-            x = numpy.zeros(7)
+            x = numpy.zeros(8)
 
             if forecast[0, 0] < charge_threshold and c_soc < c_max:
                 x[0] = 1.0
 
             elif forecast[0, 0] > discharge_threshold and c_soc > 0:
-                x[0] = -1.0
+                x[1] = 1.0
 
             return x
 

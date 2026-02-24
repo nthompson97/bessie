@@ -42,20 +42,26 @@ class Strategy(abc.ABC):
             last_price: The last 5-minute periods RRP price across each market ($/MWh)
 
         Returns,
-            numpy.ndarray: ac action for the upcoming period, should be a
-                7-element array where each element corresponds to,
+            numpy.ndarray: an action for the upcoming period, should be an
+                8-element array where all elements are non-negative and each
+                element corresponds to,
 
-                    * x[0]: Amount to charge/discharge (positive for charge, negative for discharge)
-                    * x[1]: Amount to assign to raise 6-sec FCAS
-                    * x[2]: Amount to assign to raise 60-sec FCAS
-                    * x[3]: Amount to assign to raise 5-min FCAS
-                    * x[4]: Amount to assign to lower 6-sec FCAS
-                    * x[5]: Amount to assign to lower 60-sec FCAS
-                    * x[6]: Amount to assign to lower 5-min FCAS
+                    * x[0]: Amount to charge
+                    * x[1]: Amount to discharge
+                    * x[2]: Amount to assign to raise 6-sec FCAS
+                    * x[3]: Amount to assign to raise 60-sec FCAS
+                    * x[4]: Amount to assign to raise 5-min FCAS
+                    * x[5]: Amount to assign to lower 6-sec FCAS
+                    * x[6]: Amount to assign to lower 60-sec FCAS
+                    * x[7]: Amount to assign to lower 5-min FCAS
 
                 Subject to,
-                    * -1 <= x[0] <= 1
-                    * x[i] >= 0 for all i >= 1
+                    * 0 <= x[i] <= 1 for all i
+                    * -1 <= sum(x) <= 1
+                    * x[0] == 0 if x[1] > 0
+                    * x[1] == 0 if x[0] > 0
+
+                TODO: Add conditions so we cannot exceed power rating
 
         """
         ...

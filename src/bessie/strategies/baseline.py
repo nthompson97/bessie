@@ -38,17 +38,17 @@ class NaiveBaseline(NJITStrategy):
         eta_dchg: float,
         last_price: numpy.ndarray,
     ) -> numpy.ndarray:
-        x = numpy.zeros(7)
+        x = numpy.zeros(8)
 
         if c_soc < c_max / 2:
             if last_price[0] < self._charge_limit and c_soc < c_max:
                 # < 50% SOC and price is low, time to charge
-                x[0] = +1.0
+                x[0] = 1.0
 
         else:
             if last_price[0] > self._discharge_limit and c_soc > 0:
                 # > 50% SOC and price is high, time to discharge
-                x[0] = -1.0
+                x[1] = 1.0
 
         return x
 
@@ -66,15 +66,15 @@ class NaiveBaseline(NJITStrategy):
             eta_dchg: float,
             last_price: numpy.ndarray,
         ) -> numpy.ndarray:
-            x = numpy.zeros(7)
+            x = numpy.zeros(8)
 
             if c_soc < c_max / 2:
                 if last_price[0] < charge_limit and c_soc < c_max:
-                    x[0] = +1.0
+                    x[0] = 1.0
 
             else:
                 if last_price[0] > discharge_limit and c_soc > 0:
-                    x[0] = -1.0
+                    x[1] = 1.0
 
             return x
 
@@ -98,17 +98,17 @@ class ForecastBaseline(NaiveBaseline):
         eta_dchg: float,
         last_price: numpy.ndarray,
     ) -> numpy.ndarray:
-        x = numpy.zeros(7)
+        x = numpy.zeros(8)
 
         if c_soc < c_max / 2:
             if forecast[0, 0] < self._charge_limit and c_soc < c_max:
                 # < 50% SOC and price is low, time to charge
-                x[0] = +1.0
+                x[0] = 1.0
 
         else:
             if forecast[0, 0] > self._discharge_limit and c_soc > 0:
                 # > 50% SOC and price is high, time to discharge
-                x[0] = -1.0
+                x[1] = 1.0
 
         return x
 
@@ -126,15 +126,15 @@ class ForecastBaseline(NaiveBaseline):
             eta_dchg: float,
             last_price: numpy.ndarray,
         ) -> numpy.ndarray:
-            x = numpy.zeros(7)
+            x = numpy.zeros(8)
 
             if c_soc < c_max / 2:
                 if forecast[0, 0] < charge_limit and c_soc < c_max:
-                    x[0] = +1.0
+                    x[0] = 1.0
 
             else:
                 if forecast[0, 0] > discharge_limit and c_soc > 0:
-                    x[0] = -1.0
+                    x[1] = 1.0
 
             return x
 
@@ -145,6 +145,8 @@ class ForecastBaselineFCAS(Strategy):
     Simple forecast based strategy that engages with FCAS markets. Always 
     offers FCAS services, and charges/discharges when capacity falls 
     below/above 50% and the forecast price is below/above the charge/discharge limit.
+
+    Will always offer 50%% of capacity to FCAS, and the remaining 50% to energy.
     """
 
     def __init__(
@@ -167,17 +169,17 @@ class ForecastBaselineFCAS(Strategy):
         eta_dchg: float,
         last_price: numpy.ndarray,
     ) -> numpy.ndarray:
-        x = numpy.zeros(7)
-        x[1:] = 1.0  # Always offer FCAS services
+        x = numpy.zeros(8)
+        x[2:] = 0.5 / 8  # Always offer FCAS services
 
         if c_soc < c_max / 2:
             if forecast[0, 0] < self._charge_limit and c_soc < c_max:
                 # < 50% SOC and price is low, time to charge
-                x[0] = +1.0
+                x[0] = 0.5
 
         else:
             if forecast[0, 0] > self._discharge_limit and c_soc > 0:
                 # > 50% SOC and price is high, time to discharge
-                x[0] = -1.0
+                x[1] = 0.5
 
         return x

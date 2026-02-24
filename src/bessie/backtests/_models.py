@@ -115,9 +115,9 @@ class BacktestResults:
     strategy: Strategy
     actions: (
         numpy.ndarray
-    )  # (n_timestamps, 7) Actions through time, across each market
+    )  # (n_timestamps, 8) Actions: [charge_MWh, discharge_MWh, RAISE6SEC..LOWER5MIN MW]
     c_soc: numpy.ndarray  # (n_timestamps,) State Of Charge through time
     c_max: numpy.ndarray  # (n_timestamps,) BESS max capacity through time
     revenue: (
         numpy.ndarray
-    )  # (n_timestamps, 7) period revenue through time, across each market
+    )  # (n_timestamps, 8) Revenue: [charge_cost, discharge_rev, FCAS markets]

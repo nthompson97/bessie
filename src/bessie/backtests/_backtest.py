@@ -53,6 +53,13 @@ def bess_backtest(
     Returns,
         A BacktestResults object containing  data for each timestep in the
             backtest period.
+
+    TODO: Implement a mechanism for implying when frequency response was 
+            required. I am hoping this is something we can source from
+            historical data, i.e. a timeseries of counts for the number
+            of times each FCAS market was called in each dispatch interval.
+    NOTE: For now, it will be assume FCAS services are called randomly
+            according to the probabilities defined in FCAS_PROBS.
     """
     logging.info(f"Running BESS backtest for strategy {strategy.name}")
 
@@ -66,10 +73,10 @@ def bess_backtest(
 
     (n, _) = data.realised.shape
 
-    output_actions = numpy.empty((n, 7))
+    output_actions = numpy.empty((n, 8))
     output_c_soc = numpy.empty(n)
     output_c_max = numpy.empty(n)
-    output_revenue = numpy.empty((n, 7))
+    output_revenue = numpy.empty((n, 8))
 
     for i in range(n):
         action = strategy.action(
@@ -82,43 +89,42 @@ def bess_backtest(
             last_price=data.realised[i - 1, :],
         )
 
-        # --- Energy market (action[0]) — bespoke handling ---
-        if action[0] < -1.0 or action[0] > 1.0:
+        if (action < 0).any() or (action > 1).any():
             logging.warning(
-                f"Strategy {strategy.name} produced action {action[0]} at index {i}, which is outside the expected range [-1.0, 1.0]. Clipping to range."
+                f"Strategy {strategy.name} produced action {action} at index "
+                f"{i} with values outside [0, 1]. Clipping to range."
             )
-            action[0] = numpy.clip(action[0], -1.0, 1.0)
+            action = numpy.clip(action, 0.0, 1.0)
+
+        if action.sum() > 1.0:
+            logging.warning(
+                f"Strategy {strategy.name} produced action {action} at index "
+                f"{i} with sum {action.sum()} > 1. Clipping to sum of 1."
+            )
+            action = action / action.sum()
 
         logging.debug(i, c_soc, c_max, p_max, data.realised[i - 1], action)
 
-        if action[0] > 0:
-            # Charging
+        # --- Energy market (action[0]=charge, action[1]=discharge) — bespoke handling ---
+        # Both values must be non-negative fractions of p_max.
+        a_charge = float(numpy.clip(action[0], 0.0, 1.0))
+        a_discharge = float(numpy.clip(action[1], 0.0, 1.0))
+
+        if a_charge > 0 or a_discharge > 0:
             c_max *= 1 - deg
-            p_action = min(action[0] * p_max * dt, c_max - c_soc)
-            p_actual = p_action * eta_chg
 
-        elif action[0] == 0:
-            # Idling
-            p_action = 0.0
-            p_actual = 0.0
-
-        elif action[0] < 0:
-            # Discharging
-            c_max *= 1 - deg
-            p_action = -min(-action[0] * p_max * dt, c_soc)
-            p_actual = p_action * eta_dchg
-
-        else:
-            raise ValueError
+        p_charge = min(a_charge * p_max * dt, c_max - c_soc)
+        p_discharge = min(a_discharge * p_max * dt, c_soc)
+        p_actual = p_charge * eta_chg - p_discharge * eta_dchg
 
         c_soc += p_actual
 
-        # --- FCAS markets (action[1:7]) — vectorised ---
+        # --- FCAS markets (action[2:8]) — vectorised ---
         # Actions are fractions [0, 1] of p_max offered as availability into each market.
-        # Raise (indices 1-3): BESS discharges when called — needs SoC headroom downward.
-        # Lower (indices 4-6): BESS charges when called — needs SoC headroom upward.
+        # Raise (indices 2-4): BESS discharges when called — needs SoC headroom downward.
+        # Lower (indices 5-7): BESS charges when called — needs SoC headroom upward.
         fcas_mw = (
-            numpy.clip(action[1:7], 0.0, 1.0) * p_max
+            numpy.clip(action[2:8], 0.0, 1.0) * p_max
         )  # shape (6,), MW offered
 
         # MWh that would be consumed/absorbed if the market is called at full power
@@ -146,12 +152,14 @@ def bess_backtest(
         )
         c_soc = numpy.clip(c_soc + expected_soc_delta.sum(), 0.0, c_max)
 
-        output_actions[i, 0] = p_action
-        output_actions[i, 1:7] = fcas_mw
+        output_actions[i, 0] = p_charge
+        output_actions[i, 1] = p_discharge
+        output_actions[i, 2:8] = fcas_mw
         output_c_soc[i] = c_soc
         output_c_max[i] = c_max
-        output_revenue[i, 0] = -p_action * data.realised[i, 0]
-        output_revenue[i, 1:7] = fcas_revenue
+        output_revenue[i, 0] = -p_charge * data.realised[i, 0]
+        output_revenue[i, 1] = p_discharge * data.realised[i, 0]
+        output_revenue[i, 2:8] = fcas_revenue
 
     return BacktestResults(
         strategy=strategy,
