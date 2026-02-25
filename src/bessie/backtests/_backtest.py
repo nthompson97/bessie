@@ -94,7 +94,7 @@ def bess_backtest(
         )
 
         if (action < 0).any() or (action > 1).any():
-            logging.warning(
+            logging.debug(
                 f"Strategy {strategy.name} produced action {action} at index "
                 f"{i} with values outside [0, 1]. Clipping to range."
             )
@@ -103,7 +103,7 @@ def bess_backtest(
         # Discharge-side: discharge energy + raise FCAS share one power pool
         discharge_side = action[1] + action[2:5].sum()
         if discharge_side > 1.0:
-            logging.warning(
+            logging.debug(
                 f"Strategy {strategy.name} produced action {action} at index "
                 f"{i} with discharge-side sum {discharge_side:.3f} > 1. Normalising."
             )
@@ -113,7 +113,7 @@ def bess_backtest(
         # Charge-side: charge energy + lower FCAS share one power pool
         charge_side = action[0] + action[5:8].sum()
         if charge_side > 1.0:
-            logging.warning(
+            logging.debug(
                 f"Strategy {strategy.name} produced action {action} at index "
                 f"{i} with charge-side sum {charge_side:.3f} > 1. Normalising."
             )
@@ -160,7 +160,7 @@ def bess_backtest(
         )
 
         if c_soc + p_actual.sum() > c_max or c_soc + p_actual.sum() < 0:
-            logging.warning(
+            logging.debug(
                 f"Strategy {strategy.name} produced action {action} at index "
                 f"{i} that would result in infeasible SOC. Skipping."
             )
