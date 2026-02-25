@@ -1,5 +1,3 @@
-from typing import Sequence
-
 import pandas
 from plotly_resampler import FigureWidgetResampler
 
@@ -19,37 +17,68 @@ def backtest_scorecard(
     columns = {}
 
     for label, result in results.items():
-        n_actions = (result.p_actions != 0).sum()
+        n_actions = (result.actions[:, :2] != 0).sum()
+        n_actions_fcas = (result.actions[:, 2:] != 0).sum()
 
         columns[label] = {
-            ("Revenue", "Total"): (result.revenue.sum(), "${:,.0f}"),
-            ("Revenue", "Per day"): (result.revenue.sum() / n_days, "${:,.0f}"),
+            ("Revenue", "Total"): (
+                result.revenue.sum(),
+                "${:,.0f}",
+            ),
+            ("Revenue", "Per day"): (
+                result.revenue.sum() / n_days,
+                "${:,.0f}",
+            ),
+            ("Revenue", "Energy Total"): (
+                result.revenue[:, :2].sum().sum(),
+                "${:,.0f}",
+            ),
+            ("Revenue", "Energy Per day"): (
+                result.revenue[:, :2].sum().sum() / n_days,
+                "${:,.0f}",
+            ),
+            ("Revenue", "FCAS Total"): (
+                result.revenue[:, 2:].sum().sum(),
+                "${:,.0f}",
+            ),
+            ("Revenue", "FCAS Per day"): (
+                result.revenue[:, 2:].sum().sum() / n_days,
+                "${:,.0f}",
+            ),
             ("Activity", "Charging intervals"): (
-                (result.p_actions > 0).sum(),
+                (result.actions[:, 0] > 0.0).sum(),
                 "{:,.0f}",
             ),
             ("Activity", "Charging %"): (
-                100 * (result.p_actions > 0).mean(),
+                100 * (result.actions[:, 0] > 0.0).mean(),
                 "{:.1f}%",
             ),
             ("Activity", "Idle intervals"): (
-                (result.p_actions == 0).sum(),
+                (result.actions[:, :2].sum(axis=1) == 0.0).sum(),
                 "{:,.0f}",
             ),
             ("Activity", "Idle %"): (
-                100 * (result.p_actions == 0).mean(),
+                100 * (result.actions[:, :2].sum(axis=1) == 0.0).mean(),
                 "{:.1f}%",
             ),
             ("Activity", "Discharging intervals"): (
-                (result.p_actions < 0).sum(),
+                (result.actions[:, 1] > 0.0).sum(),
                 "{:,.0f}",
             ),
             ("Activity", "Discharging %"): (
-                100 * (result.p_actions < 0).mean(),
+                100 * (result.actions[:, 1] > 0.0).mean(),
                 "{:.1f}%",
             ),
-            ("Degradation", "Total actions"): (n_actions, "{:,.0f}"),
-            ("Degradation", "Actions per day"): (n_actions / n_days, "{:,.1f}"),
+            ("Degradation", "Energy Total Actions"): (n_actions, "{:,.0f}"),
+            ("Degradation", "Energy Actions per day"): (
+                n_actions / n_days,
+                "{:,.1f}",
+            ),
+            ("Degradation", "FCAS Total Actions"): (n_actions_fcas, "{:,.0f}"),
+            ("Degradation", "FCAS Actions per day"): (
+                n_actions_fcas / n_days,
+                "{:,.1f}",
+            ),
             ("Degradation", "Final capacity (MWh)"): (
                 result.c_max[-1],
                 "{:,.2f}",
@@ -86,9 +115,24 @@ def backtest_tsplot(
     results: BacktestResults,
     resampler: bool = True,
 ) -> FigureWidgetResampler:
+    columns = [
+        "Charge",
+        "Discharge",
+        "FCAS Raise 6 Sec",
+        "FCAS Raise 60 Sec",
+        "FCAS Raise 5 Min",
+        "FCAS Lower 6 Sec",
+        "FCAS Lower 60 Sec",
+        "FCAS Lower 5 Min",
+    ]
+
     return tsplot(
         {
-            "State": pandas.Series(results.p_actions, index=data.timestamps),
+            "State": pandas.DataFrame(
+                results.actions,
+                index=data.timestamps,
+                columns=columns,
+            ),
             "Charge": pandas.DataFrame(
                 {
                     "SOC": results.c_soc,
@@ -97,16 +141,17 @@ def backtest_tsplot(
                 index=data.timestamps,
             ),
             "Revenue": pandas.DataFrame(
-                {
-                    "Revenue": results.revenue,
-                    "Cumulative revenue": results.revenue.cumsum(),
-                },
+                results.revenue.cumsum(axis=0),
                 index=data.timestamps,
+                columns=columns,
             ),
-            "Market price": pandas.Series(data.realised, index=data.timestamps),
+            "Market price": pandas.DataFrame(
+                data.realised,
+                index=data.timestamps,
+                columns=["RRP"] + columns[2:],
+            ),
         },
         resampler=resampler,
-        title=f"Total revenue: ${results.revenue.sum():,.2f}",
     )
 
 
@@ -124,7 +169,10 @@ def backtest_comparison(
     return tsplot(
         {
             "Dispatch (MW)": pandas.DataFrame(
-                {lbl: r.p_actions for lbl, r in zip(labels, results.values())},
+                {
+                    lbl: r.actions[:, 0] - r.actions[:, 1]
+                    for lbl, r in zip(labels, results.values())
+                },
                 index=data.timestamps,
             ),
             "SOC (MWh)": pandas.DataFrame(
@@ -140,13 +188,24 @@ def backtest_comparison(
             ),
             "Cumulative Revenue ($)": pandas.DataFrame(
                 {
-                    lbl: r.revenue.cumsum()
+                    lbl: r.revenue.sum(axis=1).cumsum()
                     for lbl, r in zip(labels, results.values())
                 },
                 index=data.timestamps,
             ),
-            "Market price ($/MWh)": pandas.Series(
-                data.realised, index=data.timestamps
+            "Cumulative Revenue Energy ($)": pandas.DataFrame(
+                {
+                    lbl: r.revenue[:, :2].sum(axis=1).cumsum()
+                    for lbl, r in zip(labels, results.values())
+                },
+                index=data.timestamps,
+            ),
+            "Cumulative Revenue FCAS ($)": pandas.DataFrame(
+                {
+                    lbl: r.revenue[:, 2:].sum(axis=1).cumsum()
+                    for lbl, r in zip(labels, results.values())
+                },
+                index=data.timestamps,
             ),
         },
         resampler=resampler,

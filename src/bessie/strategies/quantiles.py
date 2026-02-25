@@ -31,23 +31,24 @@ class QuantilePicker(NJITStrategy):
         p_max: float,
         eta_chg: float,
         eta_dchg: float,
-        last_price: float,
-    ) -> float:
+        last_price: numpy.ndarray,
+    ) -> numpy.ndarray:
         # TODO: handle max actions per day
 
-        charge_threshold = numpy.quantile(forecast, self._charge_quantile)
-        discharge_threshold = numpy.quantile(forecast, self._discharge_quantile)
+        charge_threshold = numpy.quantile(forecast[0, :], self._charge_quantile)
+        discharge_threshold = numpy.quantile(forecast[0, :], self._discharge_quantile)
 
-        if forecast[0] < charge_threshold and c_soc < c_max:
+        x = numpy.zeros(8)
+
+        if forecast[0, 0] < charge_threshold and c_soc < c_max:
             # price is low, time to charge
-            return +1.0
+            x[0] = 1.0
 
-        elif forecast[0] > discharge_threshold and c_soc > 0:
+        elif forecast[0, 0] > discharge_threshold and c_soc > 0:
             # price is high, time to discharge
-            return -1.0
+            x[1] = 1.0
 
-        else:
-            return 0.0
+        return x
 
     def action_njit(self) -> Callable[..., float]:
         charge_quantile = float(self._charge_quantile)
@@ -61,18 +62,19 @@ class QuantilePicker(NJITStrategy):
             p_max: float,
             eta_chg: float,
             eta_dchg: float,
-            last_price: float,
-        ) -> float:
-            charge_threshold = numpy.quantile(forecast, charge_quantile)
-            discharge_threshold = numpy.quantile(forecast, discharge_quantile)
+            last_price: numpy.ndarray,
+        ) -> numpy.ndarray:
+            charge_threshold = numpy.quantile(forecast[0, :], charge_quantile)
+            discharge_threshold = numpy.quantile(forecast[0, :], discharge_quantile)
 
-            if forecast[0] < charge_threshold and c_soc < c_max:
-                return 1.0
+            x = numpy.zeros(8)
 
-            elif forecast[0] > discharge_threshold and c_soc > 0:
-                return -1.0
+            if forecast[0, 0] < charge_threshold and c_soc < c_max:
+                x[0] = 1.0
 
-            else:
-                return 0.0
+            elif forecast[0, 0] > discharge_threshold and c_soc > 0:
+                x[1] = 1.0
+
+            return x
 
         return _action

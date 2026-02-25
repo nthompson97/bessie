@@ -1,5 +1,6 @@
-from ._core import Strategy, NJITStrategy
-from .baseline import NaiveBaseline, ForecastBaseline
+from ._core import NJITStrategy, Strategy
+from .baseline import ForecastBaseline, ForecastBaselineFCAS, NaiveBaseline
 from .dynamic import DPOptimised
 from .optimised import ClarabelOptimised
+from .optimised_fcas import ClarabelOptimisedFCAS
 from .quantiles import QuantilePicker

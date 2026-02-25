@@ -10,9 +10,9 @@ from bessie.strategies import Strategy
 
 @dataclass
 class BatterySpec:
-    p_max: float = 50.0   # MW, max charge/discharge power rating
+    p_max: float = 50.0  # MW, max charge/discharge power rating
     e_max: float = 50.0  # MWh, usable energy capacity (= p_max × duration)
-    deg: float = 0.0      # degradation rate per action
+    deg: float = 0.0  # degradation rate per action
     eta_chg: float = 0.90  # charging efficiency
     eta_dchg: float = 0.95  # discharging efficiency
 
@@ -44,8 +44,8 @@ class BatterySpec:
 
 @dataclass
 class BacktestInputData:
-    forecast: numpy.ndarray  # (n_timestamps, n_forecast_steps)
-    realised: numpy.ndarray  # (n_timestamps,)
+    forecast: numpy.ndarray  # (n_timestamps, 7, n_forecast_steps)
+    realised: numpy.ndarray  # (n_timestamps, 7)
     timestamps: pandas.DatetimeIndex  # (n_timestamps,)
 
     region: Region
@@ -65,14 +65,28 @@ class BacktestInputData:
         Produces input data using realised prices from nemosis, and forecasts
         from a combination of P5MIN and PREDISPATCH from nemseer.
         """
+
         forecast = get_one_day_forecast(start, end)
+        forecast_array = (
+            forecast.sel(region=region.value)
+            .to_array(dim="market")
+            .transpose("timestamp", "market", "step")
+            .to_numpy()
+        )
+
         realised = get_realised_prices(start, end)
+        realised_array = (
+            realised.sel(region=region.value)
+            .to_array(dim="market")
+            .transpose("timestamp", "market")
+            .to_numpy()
+        )
 
         timestamps = pandas.DatetimeIndex(forecast["timestamp"].to_numpy())
 
         return cls(
-            forecast=forecast.sel(region=region.value)["RRP"].to_numpy(),
-            realised=realised.sel(region=region.value)["RRP"].to_numpy(),
+            forecast=forecast_array,
+            realised=realised_array,
             timestamps=timestamps,
             region=region,
             start=start,
@@ -99,7 +113,11 @@ class BacktestInputData:
 @dataclass
 class BacktestResults:
     strategy: Strategy
-    p_actions: numpy.ndarray  # (n_timestamps,) Power actions through time
-    c_soc: numpy.ndarray  # (n_timestamps,) State Of Chargeg through time
+    actions: (
+        numpy.ndarray
+    )  # (n_timestamps, 8) Actions: [charge_MWh, discharge_MWh, RAISE6SEC..LOWER5MIN MW]
+    c_soc: numpy.ndarray  # (n_timestamps,) State Of Charge through time
     c_max: numpy.ndarray  # (n_timestamps,) BESS max capacity through time
-    revenue: numpy.ndarray  # (n_timestamps,) period revenue through time
+    revenue: (
+        numpy.ndarray
+    )  # (n_timestamps, 8) Revenue: [charge_cost, discharge_rev, FCAS markets]

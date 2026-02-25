@@ -20,7 +20,7 @@ def _backtest_loop(
 ) -> tuple:
     n = realised.shape[0]
 
-    output_p_actions = numpy.empty(n)
+    output_actions = numpy.empty(n)
     output_c_soc = numpy.empty(n)
     output_c_max = numpy.empty(n)
     output_revenue = numpy.empty(n)
@@ -61,12 +61,12 @@ def _backtest_loop(
 
         c_soc += p_actual
 
-        output_p_actions[i] = p_action
+        output_actions[i] = p_action
         output_c_soc[i] = c_soc
         output_c_max[i] = c_max
         output_revenue[i] = -p_action * realised[i]
 
-    return output_p_actions, output_c_soc, output_c_max, output_revenue
+    return output_actions, output_c_soc, output_c_max, output_revenue
 
 
 def bess_backtest_njit(
@@ -78,7 +78,7 @@ def bess_backtest_njit(
 
     action_fn = strategy.action_njit()
 
-    p_actions, c_soc, c_max, revenue = _backtest_loop(
+    actions, c_soc, c_max, revenue = _backtest_loop(
         action_fn=action_fn,
         forecasts=data.forecast,
         realised=data.realised,
@@ -92,7 +92,7 @@ def bess_backtest_njit(
 
     return BacktestResults(
         strategy=strategy,
-        p_actions=p_actions,
+        actions=actions,
         c_soc=c_soc,
         c_max=c_max,
         revenue=revenue,
